@@ -1,0 +1,77 @@
+export class ScrapeerError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+
+export class AuthenticationError extends ScrapeerError {
+  constructor() {
+    super(
+      "Invalid API key. Check your SCRAPEER_API_KEY or generate a new one at https://app.scrapeer.com/settings",
+      401,
+    );
+  }
+}
+
+export class ForbiddenError extends ScrapeerError {
+  constructor() {
+    super("You don't have permission to access this resource.", 403);
+  }
+}
+
+export class FlowNotFoundError extends ScrapeerError {
+  constructor() {
+    super(
+      "Flow not found. Use scrapeer_list_flows to see your available flows.",
+      404,
+    );
+  }
+}
+
+export class RateLimitedError extends ScrapeerError {
+  constructor() {
+    super("Rate limited. Wait a moment and try again.", 429);
+  }
+}
+
+export class QuotaExceededError extends ScrapeerError {
+  constructor() {
+    super(
+      "Insufficient credits to run this flow. Top up at https://app.scrapeer.com/billing",
+      402,
+    );
+  }
+}
+
+export class GatewayError extends ScrapeerError {
+  constructor(message?: string) {
+    super(
+      message || "Scrapeer service is temporarily unavailable. Try again shortly.",
+      502,
+    );
+  }
+}
+
+export function classifyHttpError(status: number, body: string): ScrapeerError {
+  switch (status) {
+    case 401:
+      return new AuthenticationError();
+    case 402:
+      return new QuotaExceededError();
+    case 403:
+      if (body.includes("ENTITLEMENT_DENIED") || body.includes("credits")) {
+        return new QuotaExceededError();
+      }
+      return new ForbiddenError();
+    case 404:
+      return new FlowNotFoundError();
+    case 429:
+      return new RateLimitedError();
+    default:
+      return new GatewayError();
+  }
+}

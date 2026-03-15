@@ -1,0 +1,33 @@
+{
+  "name": "@scrapeer/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Scrapeer — trigger scraping flows from AI agents",
+  "type": "module",
+  "bin": {
+    "scrapeer-mcp-server": "dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": ["mcp", "scrapeer", "scraping", "automation", "ai"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "msw": "^2.7.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
