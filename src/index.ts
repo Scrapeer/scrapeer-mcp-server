@@ -1,0 +1,64 @@
+#!/usr/bin/env node
+
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { ScrapeerClient } from "./client.js";
+import { toolDefinitions } from "./tools/definitions.js";
+import { createHandlers } from "./tools/handlers.js";
+
+const API_KEY = process.env.SCRAPEER_API_KEY;
+const BASE_URL = process.env.SCRAPEER_BASE_URL ?? "https://api.scrapeer.com";
+
+if (!API_KEY) {
+  process.stderr.write(
+    "Error: SCRAPEER_API_KEY environment variable is required.\n" +
+      "Generate one at https://app.scrapeer.com/settings\n\n" +
+      "Usage:\n" +
+      "  SCRAPEER_API_KEY=sk_... pnpx @scrapeer/mcp-server\n",
+  );
+  process.exit(1);
+}
+
+const client = new ScrapeerClient(API_KEY, BASE_URL);
+const handlers = createHandlers(client);
+
+// Map tool names (snake_case) to handler keys (camelCase)
+const TOOL_TO_HANDLER: Record<string, keyof typeof handlers> = {
+  scrapeer_list_flows: "listFlows",
+  scrapeer_get_flow: "getFlow",
+  scrapeer_run_flow: "runFlow",
+  scrapeer_run_flow_and_wait: "runFlowAndWait",
+  scrapeer_get_run_status: "getRunStatus",
+  scrapeer_get_run_results: "getRunResults",
+  scrapeer_get_run_steps: "getRunSteps",
+  scrapeer_list_runs: "listRuns",
+  scrapeer_cancel_run: "cancelRun",
+};
+
+const server = new McpServer({
+  name: "scrapeer",
+  version: "0.1.0",
+});
+
+// Register all tools
+for (const def of toolDefinitions) {
+  const handlerKey = TOOL_TO_HANDLER[def.name];
+  if (!handlerKey) {
+    process.stderr.write(`No handler for tool: ${def.name}\n`);
+    continue;
+  }
+
+  const handler = handlers[handlerKey];
+
+  server.tool(
+    def.name,
+    def.description,
+    def.inputSchema.shape,
+    def.annotations,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (args: any) => handler(args),
+  );
+}
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
