@@ -52,6 +52,68 @@ async function withErrorHandling(fn: () => Promise<ToolResult>): Promise<ToolRes
 }
 
 // ---------------------------------------------------------------------------
+// Flow resolution: accepts UUID or name, resolves to a single flow ID
+// ---------------------------------------------------------------------------
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveFlowId(
+  client: ScrapeerClient,
+  flowInput: string,
+): Promise<{ id: string } | { error: ToolResult }> {
+  // If it's a UUID, use it directly
+  if (UUID_REGEX.test(flowInput)) {
+    return { id: flowInput };
+  }
+
+  // Otherwise, search by name
+  const response = await client.listProjects(100, 0);
+  const matches = response.projects.filter(
+    (p) => p.Title.toLowerCase() === flowInput.toLowerCase(),
+  );
+
+  if (matches.length === 0) {
+    // Try partial match
+    const partial = response.projects.filter(
+      (p) => p.Title.toLowerCase().includes(flowInput.toLowerCase()),
+    );
+    if (partial.length === 0) {
+      return {
+        error: formatErrorResponse(
+          `No flow found matching "${flowInput}". Use scrapeer_list_flows to see available flows.`,
+        ),
+      };
+    }
+    if (partial.length === 1) {
+      return { id: partial[0].ID };
+    }
+    // Multiple partial matches
+    const list = partial
+      .map((p) => `  - "${p.Title}" (${p.ID})`)
+      .join("\n");
+    return {
+      error: formatErrorResponse(
+        `Multiple flows match "${flowInput}". Ask the user which one they mean:\n${list}`,
+      ),
+    };
+  }
+
+  if (matches.length === 1) {
+    return { id: matches[0].ID };
+  }
+
+  // Multiple exact matches
+  const list = matches
+    .map((p) => `  - "${p.Title}" (${p.ID}, created ${p.CreatedAt})`)
+    .join("\n");
+  return {
+    error: formatErrorResponse(
+      `Multiple flows named "${flowInput}". Ask the user which one they mean:\n${list}`,
+    ),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Handler factory
 // ---------------------------------------------------------------------------
 
@@ -92,7 +154,9 @@ export function createHandlers(
   // -------------------------------------------------------------------------
   async function getFlow(args: z.infer<typeof getFlowInput>): Promise<ToolResult> {
     return withErrorHandling(async () => {
-      const project = await client.getProject(args.flow_id);
+      const resolved = await resolveFlowId(client, args.flow);
+      if ("error" in resolved) return resolved.error;
+      const project = await client.getProject(resolved.id);
       let blockCount = 0;
       const blockTypes: string[] = [];
 
@@ -137,7 +201,9 @@ export function createHandlers(
   // -------------------------------------------------------------------------
   async function runFlow(args: z.infer<typeof runFlowInput>): Promise<ToolResult> {
     return withErrorHandling(async () => {
-      const run = await client.triggerCloudRun(args.flow_id, args.max_credits);
+      const resolved = await resolveFlowId(client, args.flow);
+      if ("error" in resolved) return resolved.error;
+      const run = await client.triggerCloudRun(resolved.id, args.max_credits);
       return formatToolResponse({
         execution_id: run.execution_id,
         workflow_id: run.workflow_id,
@@ -154,7 +220,9 @@ export function createHandlers(
   ): Promise<ToolResult> {
     return withErrorHandling(async () => {
       const timeoutSeconds = args.timeout_seconds ?? 300;
-      const run = await client.triggerCloudRun(args.flow_id, args.max_credits);
+      const resolved = await resolveFlowId(client, args.flow);
+      if ("error" in resolved) return resolved.error;
+      const run = await client.triggerCloudRun(resolved.id, args.max_credits);
       const executionId = run.execution_id;
 
       // Return immediately if timeout is 0

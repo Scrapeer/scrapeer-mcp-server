@@ -24,8 +24,9 @@ export const toolDefinitions = [
   {
     name: "scrapeer_get_flow",
     description:
-      "Get details about a specific scraping flow. " +
-      "USE THIS TOOL WHEN: you have a flow ID and need to know what it does, what blocks it contains. " +
+      "Get details about a specific scraping flow — what blocks it contains, when it was last modified. " +
+      "Accepts either a flow ID (UUID) or a flow name. " +
+      "USE THIS TOOL WHEN: you know which flow you want details about (by name or ID). " +
       "DO NOT USE: to list all flows (use scrapeer_list_flows).",
     inputSchema: getFlowInput,
     annotations: {
@@ -38,6 +39,7 @@ export const toolDefinitions = [
     name: "scrapeer_run_flow",
     description:
       "Trigger a cloud run of a scraping flow. Returns immediately with an execution ID. " +
+      "Accepts either a flow ID (UUID) or a flow name. " +
       "USE THIS TOOL WHEN: you want to start a run and manage polling yourself, or you want to trigger multiple runs in parallel. " +
       "DO NOT USE: if you want results in one call (use scrapeer_run_flow_and_wait instead). " +
       "The run executes in the cloud and typically takes 30s-5min.",
@@ -52,9 +54,10 @@ export const toolDefinitions = [
     name: "scrapeer_run_flow_and_wait",
     description:
       "Execute a scraping flow and wait for results. This is the recommended way to run flows. " +
+      "Accepts either a flow ID (UUID) or a flow name. " +
       "USE THIS TOOL WHEN: user says \"run my scraper\", \"scrape X\", \"execute my flow\", or you need data from a pre-built flow. " +
       "DO NOT USE: to check status of an already-running flow (use scrapeer_get_run_status), " +
-      "to list available flows (use scrapeer_list_flows first). " +
+      "to list available flows (use scrapeer_list_flows first to find the flow). " +
       "Triggers a cloud run, polls until complete, returns structured results. " +
       "Runs typically take 30s-5min. Each run costs credits.",
     inputSchema: runFlowAndWaitInput,

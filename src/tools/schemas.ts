@@ -18,22 +18,19 @@ const paginationSchema = {
 
 export const listFlowsInput = z.object(paginationSchema);
 
+// Shared: accepts either a UUID or a flow name (case-insensitive match)
+const flowIdentifier = z
+  .string()
+  .describe(
+    "The flow ID (UUID) or flow name. If a name is provided, it will be resolved to an ID. If multiple flows match the name, all matches are returned so the user can choose.",
+  );
+
 export const getFlowInput = z.object({
-  flow_id: z
-    .string()
-    .uuid()
-    .describe(
-      "The ID of the flow to get details for. Use scrapeer_list_flows to find available flow IDs.",
-    ),
+  flow: flowIdentifier,
 });
 
 export const runFlowInput = z.object({
-  flow_id: z
-    .string()
-    .uuid()
-    .describe(
-      "The ID of the flow to run. Use scrapeer_list_flows to find available flow IDs.",
-    ),
+  flow: flowIdentifier,
   max_credits: z
     .number()
     .int()
@@ -45,12 +42,7 @@ export const runFlowInput = z.object({
 });
 
 export const runFlowAndWaitInput = z.object({
-  flow_id: z
-    .string()
-    .uuid()
-    .describe(
-      "The ID of the flow to run. Use scrapeer_list_flows to find available flow IDs.",
-    ),
+  flow: flowIdentifier,
   max_credits: z
     .number()
     .int()

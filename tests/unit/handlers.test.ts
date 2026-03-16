@@ -176,7 +176,7 @@ describe("getFlow", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.getFlow({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     });
     const data = parseContent(result) as {
       block_count: number;
@@ -201,7 +201,7 @@ describe("getFlow", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.getFlow({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     });
     const data = parseContent(result) as {
       block_count: number;
@@ -231,7 +231,7 @@ describe("runFlow", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.runFlow({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     });
     const data = parseContent(result) as {
       execution_id: string;
@@ -275,7 +275,7 @@ describe("runFlowAndWait", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.runFlowAndWait({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
       timeout_seconds: 60,
     });
 
@@ -315,7 +315,7 @@ describe("runFlowAndWait", () => {
 
     const handlers = createHandlers(makeClient(), timeoutSleep);
     const result = await handlers.runFlowAndWait({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
       timeout_seconds: 1,
     });
 
@@ -345,7 +345,7 @@ describe("runFlowAndWait", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.runFlowAndWait({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
       timeout_seconds: 0,
     });
 
@@ -378,7 +378,7 @@ describe("runFlowAndWait", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.runFlowAndWait({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
       timeout_seconds: 60,
     });
 
@@ -645,7 +645,7 @@ describe("error handling", () => {
 
     const handlers = makeHandlers();
     const result = await handlers.getFlow({
-      flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     });
 
     expect((result as { isError?: boolean }).isError).toBe(true);
