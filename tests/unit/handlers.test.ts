@@ -35,10 +35,10 @@ function parseContent(result: { content: Array<{ text: string }> }): unknown {
 // Minimal fixture factories
 function makeProject(overrides: Record<string, unknown> = {}) {
   return {
-    id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    title: "My Scraper",
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-02T00:00:00Z",
+    ID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    Title: "My Scraper",
+    CreatedAt: "2026-01-01T00:00:00Z",
+    UpdatedAt: "2026-01-02T00:00:00Z",
     ...overrides,
   };
 }
@@ -94,8 +94,8 @@ function makeSteps() {
 
 describe("listFlows", () => {
   it("transforms gateway response to MCP format (projects→flows, projectCount→total, computes has_more)", async () => {
-    const projectA = makeProject({ id: "flow-aaa", title: "Flow A" });
-    const projectB = makeProject({ id: "flow-bbb", title: "Flow B" });
+    const projectA = makeProject({ ID: "flow-aaa", Title: "Flow A" });
+    const projectB = makeProject({ ID: "flow-bbb", Title: "Flow B" });
 
     server.use(
       http.get(`${BASE_URL}/api/v1/projects`, () =>
@@ -163,13 +163,13 @@ describe("getFlow", () => {
       http.get(`${BASE_URL}/api/v1/projects/:id`, () =>
         HttpResponse.json({
           ...makeProject(),
-          data: {
+          Data: JSON.stringify({
             nodes: [
               { type: "navigate" },
               { type: "click" },
               { type: "navigate" }, // duplicate type — should deduplicate
             ],
-          },
+          }),
         }),
       ),
     );
@@ -195,7 +195,7 @@ describe("getFlow", () => {
   it("handles missing data.nodes gracefully", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/projects/:id`, () =>
-        HttpResponse.json({ ...makeProject(), data: {} }),
+        HttpResponse.json({ ...makeProject(), Data: JSON.stringify({}) }),
       ),
     );
 

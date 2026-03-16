@@ -2,21 +2,21 @@ import { classifyHttpError } from "./errors.js";
 
 export interface ProjectListResponse {
   projects: Array<{
-    id: string;
-    title: string;
-    created_at: string;
-    updated_at: string;
+    ID: string;
+    Title: string;
+    CreatedAt: string;
+    UpdatedAt: string;
   }>;
   projectCount: number;
   projectLimit: number;
 }
 
 export interface ProjectResponse {
-  id: string;
-  title: string;
-  data: unknown;
-  created_at: string;
-  updated_at: string;
+  ID: string;
+  Title: string;
+  Data: unknown;
+  CreatedAt: string;
+  UpdatedAt: string;
 }
 
 export interface RunResponse {

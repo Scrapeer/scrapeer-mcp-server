@@ -26,7 +26,7 @@ describe("ScrapeerClient", () => {
           capturedHeaders = request.headers;
           capturedUrl = request.url;
           return HttpResponse.json({
-            projects: [{ id: "abc", title: "Test", created_at: "2026-01-01", updated_at: "2026-01-01" }],
+            projects: [{ ID: "abc", Title: "Test", CreatedAt: "2026-01-01", UpdatedAt: "2026-01-01" }],
             projectCount: 1,
             projectLimit: 20,
           });
@@ -46,18 +46,18 @@ describe("ScrapeerClient", () => {
       server.use(
         http.get(`${BASE_URL}/api/v1/projects/:id`, ({ params }) => {
           return HttpResponse.json({
-            id: params.id,
-            title: "My Flow",
-            data: { nodes: [] },
-            created_at: "2026-01-01",
-            updated_at: "2026-01-01",
+            ID: params.id,
+            Title: "My Flow",
+            Data: JSON.stringify({ nodes: [] }),
+            CreatedAt: "2026-01-01",
+            UpdatedAt: "2026-01-01",
           });
         }),
       );
 
       const result = await client.getProject("flow-123");
-      expect(result.id).toBe("flow-123");
-      expect(result.title).toBe("My Flow");
+      expect(result.ID).toBe("flow-123");
+      expect(result.Title).toBe("My Flow");
     });
   });
 

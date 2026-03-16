@@ -54,10 +54,10 @@ function createMockGateway(): HttpServer {
         JSON.stringify({
           projects: [
             {
-              id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-              title: "Test Flow",
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-02T00:00:00Z",
+              ID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+              Title: "Test Flow",
+              CreatedAt: "2026-01-01T00:00:00Z",
+              UpdatedAt: "2026-01-02T00:00:00Z",
             },
           ],
           projectCount: 1,

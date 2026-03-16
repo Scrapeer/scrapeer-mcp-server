@@ -75,7 +75,12 @@ export function createHandlers(
       const response = await client.listProjects(limit, offset);
       const total = response.projectCount;
       return formatToolResponse({
-        flows: response.projects,
+        flows: response.projects.map((p) => ({
+          id: p.ID,
+          title: p.Title,
+          created_at: p.CreatedAt,
+          updated_at: p.UpdatedAt,
+        })),
         total,
         has_more: offset + limit < total,
       });
@@ -91,7 +96,23 @@ export function createHandlers(
       let blockCount = 0;
       const blockTypes: string[] = [];
 
-      const flowData = project.data as { nodes?: Array<{ type?: string }> };
+      // Data comes from the gateway as base64-encoded JSON or a raw JSON string
+      let rawData: unknown = project.Data;
+      if (typeof rawData === "string") {
+        try {
+          // Try base64 decode first
+          const decoded = Buffer.from(rawData, "base64").toString("utf-8");
+          rawData = JSON.parse(decoded);
+        } catch {
+          try {
+            // Fallback: raw JSON string
+            rawData = JSON.parse(rawData as string);
+          } catch {
+            rawData = {};
+          }
+        }
+      }
+      const flowData = rawData as { nodes?: Array<{ type?: string }> };
       if (Array.isArray(flowData?.nodes)) {
         blockCount = flowData.nodes.length;
         const types = new Set(
@@ -101,12 +122,12 @@ export function createHandlers(
       }
 
       return formatToolResponse({
-        id: project.id,
-        title: project.title,
+        id: project.ID,
+        title: project.Title,
         block_count: blockCount,
         block_types: blockTypes,
-        created_at: project.created_at,
-        updated_at: project.updated_at,
+        created_at: project.CreatedAt,
+        updated_at: project.UpdatedAt,
       });
     });
   }
