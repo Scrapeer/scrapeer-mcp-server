@@ -26,7 +26,7 @@ describe("ScrapeerClient", () => {
           capturedHeaders = request.headers;
           capturedUrl = request.url;
           return HttpResponse.json({
-            projects: [{ ID: "abc", Title: "Test", CreatedAt: "2026-01-01", UpdatedAt: "2026-01-01" }],
+            projects: [{ ID: "abc", Title: "Test", CreatedAt: "2026-01-01", UpdatedAt: "2026-01-01", BlockCount: 2, BlockTypes: ["start", "goToUrl"] }],
             projectCount: 1,
             projectLimit: 20,
           });

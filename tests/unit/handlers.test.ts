@@ -39,6 +39,8 @@ function makeProject(overrides: Record<string, unknown> = {}) {
     Title: "My Scraper",
     CreatedAt: "2026-01-01T00:00:00Z",
     UpdatedAt: "2026-01-02T00:00:00Z",
+    BlockCount: 3,
+    BlockTypes: ["start", "goToUrl", "extractText"],
     ...overrides,
   };
 }
@@ -537,7 +539,7 @@ describe("listRuns", () => {
     );
 
     const handlers = makeHandlers();
-    await handlers.listRuns({ flow_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" });
+    await handlers.listRuns({ flow: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" });
 
     expect(capturedUrl).toContain(
       "projectId=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",

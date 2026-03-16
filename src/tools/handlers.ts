@@ -140,6 +140,8 @@ export function createHandlers(
         flows: response.projects.map((p) => ({
           id: p.ID,
           title: p.Title,
+          block_count: p.BlockCount,
+          block_types: p.BlockTypes,
           created_at: p.CreatedAt,
           updated_at: p.UpdatedAt,
         })),
@@ -245,10 +247,23 @@ export function createHandlers(
 
         if (status === "completed") {
           const steps = await client.getExecutionSteps(executionId);
+
+          // Build human-readable summary
+          const durationSec = execution.durationMs ? Math.round(execution.durationMs / 1000) : 0;
+          const dataObj = execution.data ?? {};
+          const itemCount = Array.isArray(dataObj) ? dataObj.length
+            : typeof dataObj === "object" ? Object.keys(dataObj).length : 0;
+          const summaryParts = [];
+          if (itemCount > 0) summaryParts.push(`${itemCount} data item${itemCount !== 1 ? "s" : ""}`);
+          summaryParts.push(`${durationSec}s`);
+          if (execution.creditsUsed) summaryParts.push(`${execution.creditsUsed} credits`);
+          const summary = `Completed: ${summaryParts.join(", ")}`;
+
           return formatToolResponseWithUntrustedData(
             {
               execution_id: executionId,
               status,
+              summary,
               credits_used: execution.creditsUsed,
               duration_ms: execution.durationMs,
               steps: steps.steps.map((s) => ({
@@ -391,11 +406,19 @@ export function createHandlers(
       // Map MCP "active" → gateway "started"
       const gatewayStatus = args.status === "active" ? "started" : args.status;
 
+      // Resolve flow name to ID if provided
+      let projectId: string | undefined;
+      if (args.flow) {
+        const resolved = await resolveFlowId(client, args.flow);
+        if ("error" in resolved) return resolved.error;
+        projectId = resolved.id;
+      }
+
       const response = await client.listExecutions({
         limit,
         offset,
         status: gatewayStatus,
-        projectId: args.flow_id,
+        projectId,
       });
 
       return formatToolResponse({
@@ -441,9 +464,32 @@ export function createHandlers(
     });
   }
 
+  // -------------------------------------------------------------------------
+  // scrapeer_get_account
+  // -------------------------------------------------------------------------
+  async function getAccount(): Promise<ToolResult> {
+    return withErrorHandling(async () => {
+      const [wallet, entitlements] = await Promise.all([
+        client.getWallet(),
+        client.getEntitlements(),
+      ]);
+
+      return formatToolResponse({
+        credits: wallet.credits,
+        plan: entitlements.plan.tier,
+        plan_status: entitlements.plan.status,
+        cloud_runs_enabled: entitlements.features.cloudRun.allowed,
+        cloud_run_reason: entitlements.features.cloudRun.allowed
+          ? undefined
+          : entitlements.features.cloudRun.reason,
+      });
+    });
+  }
+
   return {
     listFlows,
     getFlow,
+    getAccount,
     runFlow,
     runFlowAndWait,
     getRunStatus,

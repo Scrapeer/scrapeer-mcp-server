@@ -69,15 +69,16 @@ export const executionIdInput = z.object({
     ),
 });
 
+export const getAccountInput = z.object({});
+
 export const listRunsInput = z.object({
   ...paginationSchema,
   status: z
     .enum(["active", "completed", "failed", "cancelled"])
     .optional()
     .describe("Filter by execution status."),
-  flow_id: z
+  flow: z
     .string()
-    .uuid()
     .optional()
-    .describe("Filter runs by flow ID."),
+    .describe("Filter runs by flow name or ID. Accepts either a UUID or a flow name."),
 });

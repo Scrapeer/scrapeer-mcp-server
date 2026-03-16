@@ -1,6 +1,7 @@
 import {
   listFlowsInput,
   getFlowInput,
+  getAccountInput,
   runFlowInput,
   runFlowAndWaitInput,
   executionIdInput,
@@ -134,6 +135,20 @@ export const toolDefinitions = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: true,
+      idempotentHint: true,
+    },
+  },
+  {
+    name: "scrapeer_get_account",
+    description:
+      "Get your Scrapeer account info — credit balance, subscription plan, and whether cloud runs are enabled. " +
+      "USE THIS TOOL WHEN: you need to check if the user has enough credits before running a flow, " +
+      "or the user asks about their plan, balance, or account status. " +
+      "DO NOT USE: to list flows or runs.",
+    inputSchema: getAccountInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
       idempotentHint: true,
     },
   },

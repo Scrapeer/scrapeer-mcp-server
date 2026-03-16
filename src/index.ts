@@ -26,6 +26,7 @@ const handlers = createHandlers(client);
 const TOOL_TO_HANDLER: Record<string, keyof typeof handlers> = {
   scrapeer_list_flows: "listFlows",
   scrapeer_get_flow: "getFlow",
+  scrapeer_get_account: "getAccount",
   scrapeer_run_flow: "runFlow",
   scrapeer_run_flow_and_wait: "runFlowAndWait",
   scrapeer_get_run_status: "getRunStatus",

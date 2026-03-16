@@ -6,6 +6,8 @@ export interface ProjectListResponse {
     Title: string;
     CreatedAt: string;
     UpdatedAt: string;
+    BlockCount: number;
+    BlockTypes: string[];
   }>;
   projectCount: number;
   projectLimit: number;
@@ -138,6 +140,17 @@ export class ScrapeerClient {
     if (filters.projectId) params.set("projectId", filters.projectId);
     const qs = params.toString();
     return this.request("GET", `/api/v1/executions${qs ? `?${qs}` : ""}`);
+  }
+
+  async getWallet(): Promise<{ credits: number }> {
+    return this.request("GET", "/api/v1/user/wallet");
+  }
+
+  async getEntitlements(): Promise<{
+    plan: { tier: string; status: string };
+    features: { cloudRun: { allowed: boolean; reason?: string } };
+  }> {
+    return this.request("GET", "/api/v1/user/entitlements");
   }
 
   async cancelRun(workflowId: string): Promise<void> {

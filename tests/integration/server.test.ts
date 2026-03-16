@@ -58,6 +58,8 @@ function createMockGateway(): HttpServer {
               Title: "Test Flow",
               CreatedAt: "2026-01-01T00:00:00Z",
               UpdatedAt: "2026-01-02T00:00:00Z",
+              BlockCount: 2,
+              BlockTypes: ["start", "goToUrl"],
             },
           ],
           projectCount: 1,
@@ -129,7 +131,7 @@ describe("MCP server integration", () => {
 
   it("tools/list returns all 9 tools", async () => {
     const result = await client.listTools();
-    expect(result.tools).toHaveLength(9);
+    expect(result.tools).toHaveLength(10);
 
     const names = result.tools.map((t) => t.name);
     expect(names).toContain("scrapeer_list_flows");
