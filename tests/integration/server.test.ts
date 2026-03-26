@@ -52,7 +52,7 @@ function createMockGateway(): HttpServer {
       res.statusCode = 200;
       res.end(
         JSON.stringify({
-          projects: [
+          data: [
             {
               ID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
               Title: "Test Flow",
@@ -62,15 +62,14 @@ function createMockGateway(): HttpServer {
               BlockTypes: ["start", "goToUrl"],
             },
           ],
-          projectCount: 1,
-          projectLimit: 20,
+          pagination: { total: 1, limit: 20, offset: 0, has_more: false },
         }),
       );
       return;
     }
 
     res.statusCode = 404;
-    res.end(JSON.stringify({ error: "not found" }));
+    res.end(JSON.stringify({ error: { code: "not_found", message: "Not found." } }));
   });
 }
 

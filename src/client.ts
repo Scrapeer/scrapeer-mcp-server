@@ -1,7 +1,14 @@
 import { classifyHttpError } from "./errors.js";
 
+export interface PaginationMeta {
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 export interface ProjectListResponse {
-  projects: Array<{
+  data: Array<{
     ID: string;
     Title: string;
     CreatedAt: string;
@@ -9,8 +16,7 @@ export interface ProjectListResponse {
     BlockCount: number;
     BlockTypes: string[];
   }>;
-  projectCount: number;
-  projectLimit: number;
+  pagination: PaginationMeta;
 }
 
 export interface ProjectResponse {
@@ -58,10 +64,8 @@ export interface ExecutionStepsResponse {
 }
 
 export interface ExecutionListResponse {
-  executions: ExecutionResponse[];
-  total: number;
-  limit: number;
-  offset: number;
+  data: ExecutionResponse[];
+  pagination: PaginationMeta;
 }
 
 export interface ExecutionFilters {

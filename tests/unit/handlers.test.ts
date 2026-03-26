@@ -47,9 +47,8 @@ function makeProject(overrides: Record<string, unknown> = {}) {
 
 function makeProjectList(projects = [makeProject()]) {
   return {
-    projects,
-    projectCount: projects.length,
-    projectLimit: 20,
+    data: projects,
+    pagination: { total: projects.length, limit: 20, offset: 0, has_more: false },
   };
 }
 
@@ -95,16 +94,15 @@ function makeSteps() {
 // ---------------------------------------------------------------------------
 
 describe("listFlows", () => {
-  it("transforms gateway response to MCP format (projects→flows, projectCount→total, computes has_more)", async () => {
+  it("transforms gateway response to MCP format (data→flows, pagination.total→total, pagination.has_more)", async () => {
     const projectA = makeProject({ ID: "flow-aaa", Title: "Flow A" });
     const projectB = makeProject({ ID: "flow-bbb", Title: "Flow B" });
 
     server.use(
       http.get(`${BASE_URL}/api/v1/projects`, () =>
         HttpResponse.json({
-          projects: [projectA, projectB],
-          projectCount: 50,
-          projectLimit: 20,
+          data: [projectA, projectB],
+          pagination: { total: 50, limit: 20, offset: 0, has_more: true },
         }),
       ),
     );
@@ -473,10 +471,8 @@ describe("listRuns", () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/executions`, () =>
         HttpResponse.json({
-          executions: [makeExecution()],
-          total: 1,
-          limit: 20,
-          offset: 0,
+          data: [makeExecution()],
+          pagination: { total: 1, limit: 20, offset: 0, has_more: false },
         }),
       ),
     );
@@ -510,10 +506,8 @@ describe("listRuns", () => {
       http.get(`${BASE_URL}/api/v1/executions`, ({ request }) => {
         capturedUrl = request.url;
         return HttpResponse.json({
-          executions: [],
-          total: 0,
-          limit: 20,
-          offset: 0,
+          data: [],
+          pagination: { total: 0, limit: 20, offset: 0, has_more: false },
         });
       }),
     );
@@ -530,10 +524,8 @@ describe("listRuns", () => {
       http.get(`${BASE_URL}/api/v1/executions`, ({ request }) => {
         capturedUrl = request.url;
         return HttpResponse.json({
-          executions: [],
-          total: 0,
-          limit: 20,
-          offset: 0,
+          data: [],
+          pagination: { total: 0, limit: 20, offset: 0, has_more: false },
         });
       }),
     );
@@ -550,10 +542,8 @@ describe("listRuns", () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/executions`, () =>
         HttpResponse.json({
-          executions: [makeExecution({ status: "started" })],
-          total: 1,
-          limit: 20,
-          offset: 0,
+          data: [makeExecution({ status: "started" })],
+          pagination: { total: 1, limit: 20, offset: 0, has_more: false },
         }),
       ),
     );
@@ -626,7 +616,10 @@ describe("error handling", () => {
   it("returns isError: true with actionable message on 401", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/projects`, () =>
-        HttpResponse.json({ error: "unauthorized" }, { status: 401 }),
+        HttpResponse.json(
+          { error: { code: "unauthorized", message: "Invalid API key." } },
+          { status: 401 },
+        ),
       ),
     );
 
@@ -641,7 +634,10 @@ describe("error handling", () => {
   it("returns isError: true on 404", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/projects/:id`, () =>
-        HttpResponse.json({ error: "not found" }, { status: 404 }),
+        HttpResponse.json(
+          { error: { code: "not_found", message: "Not found." } },
+          { status: 404 },
+        ),
       ),
     );
 
@@ -657,7 +653,10 @@ describe("error handling", () => {
   it("returns isError: true on 429", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/projects`, () =>
-        HttpResponse.json({ error: "rate limited" }, { status: 429 }),
+        HttpResponse.json(
+          { error: { code: "rate_limit_exceeded", message: "Rate limited." } },
+          { status: 429 },
+        ),
       ),
     );
 
@@ -671,7 +670,10 @@ describe("error handling", () => {
   it("returns isError: true on 5xx", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/projects`, () =>
-        HttpResponse.json({ error: "internal" }, { status: 500 }),
+        HttpResponse.json(
+          { error: { code: "internal_error", message: "Internal error." } },
+          { status: 500 },
+        ),
       ),
     );
 

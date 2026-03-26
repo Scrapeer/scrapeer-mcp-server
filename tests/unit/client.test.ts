@@ -26,9 +26,8 @@ describe("ScrapeerClient", () => {
           capturedHeaders = request.headers;
           capturedUrl = request.url;
           return HttpResponse.json({
-            projects: [{ ID: "abc", Title: "Test", CreatedAt: "2026-01-01", UpdatedAt: "2026-01-01", BlockCount: 2, BlockTypes: ["start", "goToUrl"] }],
-            projectCount: 1,
-            projectLimit: 20,
+            data: [{ ID: "abc", Title: "Test", CreatedAt: "2026-01-01", UpdatedAt: "2026-01-01", BlockCount: 2, BlockTypes: ["start", "goToUrl"] }],
+            pagination: { total: 1, limit: 10, offset: 5, has_more: false },
           });
         }),
       );
@@ -37,7 +36,7 @@ describe("ScrapeerClient", () => {
       expect(capturedHeaders?.get("authorization")).toBe(`Bearer ${API_KEY}`);
       expect(capturedUrl).toContain("limit=10");
       expect(capturedUrl).toContain("offset=5");
-      expect(result.projects).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
   });
 
@@ -83,37 +82,49 @@ describe("ScrapeerClient", () => {
   });
 
   describe("error handling", () => {
-    it("throws AuthenticationError on 401", async () => {
+    it("throws AuthenticationError on 401 with API envelope", async () => {
       server.use(
         http.get(`${BASE_URL}/api/v1/projects`, () => {
-          return HttpResponse.json({ error: "unauthorized" }, { status: 401 });
+          return HttpResponse.json(
+            { error: { code: "unauthorized", message: "Invalid API key." } },
+            { status: 401 },
+          );
         }),
       );
       await expect(client.listProjects()).rejects.toThrow(AuthenticationError);
     });
 
-    it("throws FlowNotFoundError on 404", async () => {
+    it("throws FlowNotFoundError on 404 with API envelope", async () => {
       server.use(
         http.get(`${BASE_URL}/api/v1/projects/:id`, () => {
-          return HttpResponse.json({ error: "not found" }, { status: 404 });
+          return HttpResponse.json(
+            { error: { code: "not_found", message: "Not found." } },
+            { status: 404 },
+          );
         }),
       );
       await expect(client.getProject("nonexistent")).rejects.toThrow(FlowNotFoundError);
     });
 
-    it("throws RateLimitedError on 429", async () => {
+    it("throws RateLimitedError on 429 with API envelope", async () => {
       server.use(
         http.get(`${BASE_URL}/api/v1/projects`, () => {
-          return HttpResponse.json({ error: "rate limited" }, { status: 429 });
+          return HttpResponse.json(
+            { error: { code: "rate_limit_exceeded", message: "Rate limited." } },
+            { status: 429 },
+          );
         }),
       );
       await expect(client.listProjects()).rejects.toThrow(RateLimitedError);
     });
 
-    it("throws GatewayError on 500", async () => {
+    it("throws GatewayError on 500 with API envelope", async () => {
       server.use(
         http.get(`${BASE_URL}/api/v1/projects`, () => {
-          return HttpResponse.json({ error: "internal" }, { status: 500 });
+          return HttpResponse.json(
+            { error: { code: "internal_error", message: "Internal error." } },
+            { status: 500 },
+          );
         }),
       );
       await expect(client.listProjects()).rejects.toThrow(GatewayError);

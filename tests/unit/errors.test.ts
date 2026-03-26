@@ -77,4 +77,52 @@ describe("classifyHttpError", () => {
     const err = classifyHttpError(418, "teapot");
     expect(err).toBeInstanceOf(GatewayError);
   });
+
+  // API error envelope format tests
+  describe("with API error envelope", () => {
+    it("maps unauthorized code to AuthenticationError", () => {
+      const body = JSON.stringify({ error: { code: "unauthorized", message: "Invalid API key." } });
+      const err = classifyHttpError(401, body);
+      expect(err).toBeInstanceOf(AuthenticationError);
+    });
+
+    it("maps forbidden code to ForbiddenError", () => {
+      const body = JSON.stringify({ error: { code: "forbidden", message: "Access denied." } });
+      const err = classifyHttpError(403, body);
+      expect(err).toBeInstanceOf(ForbiddenError);
+    });
+
+    it("maps forbidden code with credits details to QuotaExceededError", () => {
+      const body = JSON.stringify({
+        error: { code: "forbidden", message: "Insufficient credits", details: { credits: 0 } },
+      });
+      const err = classifyHttpError(403, body);
+      expect(err).toBeInstanceOf(QuotaExceededError);
+    });
+
+    it("maps not_found code to FlowNotFoundError", () => {
+      const body = JSON.stringify({ error: { code: "not_found", message: "Not found." } });
+      const err = classifyHttpError(404, body);
+      expect(err).toBeInstanceOf(FlowNotFoundError);
+    });
+
+    it("maps rate_limit_exceeded code to RateLimitedError", () => {
+      const body = JSON.stringify({ error: { code: "rate_limit_exceeded", message: "Rate limited." } });
+      const err = classifyHttpError(429, body);
+      expect(err).toBeInstanceOf(RateLimitedError);
+    });
+
+    it("maps capacity_unavailable code to GatewayError", () => {
+      const body = JSON.stringify({ error: { code: "capacity_unavailable", message: "No workers." } });
+      const err = classifyHttpError(503, body);
+      expect(err).toBeInstanceOf(GatewayError);
+      expect(err.message).toContain("capacity");
+    });
+
+    it("falls back to status code for unknown API codes", () => {
+      const body = JSON.stringify({ error: { code: "validation_error", message: "Bad input." } });
+      const err = classifyHttpError(422, body);
+      expect(err).toBeInstanceOf(GatewayError);
+    });
+  });
 });

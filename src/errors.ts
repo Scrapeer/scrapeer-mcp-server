@@ -56,7 +56,49 @@ export class GatewayError extends ScrapeerError {
   }
 }
 
+/**
+ * Parse the API error envelope from the response body.
+ * Returns the error code if the body matches the envelope format, otherwise null.
+ * Envelope format: {"error": {"code": "unauthorized", "message": "...", ...}}
+ */
+function parseAPIErrorCode(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed?.error?.code && typeof parsed.error.code === "string") {
+      return parsed.error.code;
+    }
+  } catch {
+    // Not JSON — fall through to status-based classification
+  }
+  return null;
+}
+
 export function classifyHttpError(status: number, body: string): ScrapeerError {
+  const apiCode = parseAPIErrorCode(body);
+
+  // Match on API error code when available (new envelope format)
+  if (apiCode) {
+    switch (apiCode) {
+      case "unauthorized":
+        return new AuthenticationError();
+      case "forbidden":
+        // Check for entitlement/credits context in details
+        if (body.includes("credits") || body.includes("ENTITLEMENT_DENIED")) {
+          return new QuotaExceededError();
+        }
+        return new ForbiddenError();
+      case "not_found":
+        return new FlowNotFoundError();
+      case "rate_limit_exceeded":
+        return new RateLimitedError();
+      case "capacity_unavailable":
+        return new GatewayError("Scrapeer cloud capacity is temporarily unavailable. Try again shortly.");
+      default:
+        break;
+    }
+  }
+
+  // Fall back to HTTP status code classification (legacy format or unknown codes)
   switch (status) {
     case 401:
       return new AuthenticationError();
