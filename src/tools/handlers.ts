@@ -68,13 +68,14 @@ async function resolveFlowId(
 
   // Otherwise, search by name
   const response = await client.listProjects(100, 0);
-  const matches = response.projects.filter(
+  const projects = response.data;
+  const matches = projects.filter(
     (p) => p.Title.toLowerCase() === flowInput.toLowerCase(),
   );
 
   if (matches.length === 0) {
     // Try partial match
-    const partial = response.projects.filter(
+    const partial = projects.filter(
       (p) => p.Title.toLowerCase().includes(flowInput.toLowerCase()),
     );
     if (partial.length === 0) {
@@ -114,6 +115,59 @@ async function resolveFlowId(
 }
 
 // ---------------------------------------------------------------------------
+// Prune unreachable blocks — mirrors gateway's PruneUnreachableBlocks (BFS)
+// ---------------------------------------------------------------------------
+
+interface PrunableBlock {
+  id: string;
+  type?: string;
+  parentId?: string;
+}
+
+interface PrunableEdge {
+  source: string;
+  target: string;
+}
+
+function pruneUnreachable<
+  B extends PrunableBlock,
+  E extends PrunableEdge,
+>(allBlocks: B[], allEdges: E[]): { blocks: B[]; edges: E[] } {
+  if (allBlocks.length === 0) return { blocks: [], edges: [] };
+
+  // Find the start block
+  const startBlock = allBlocks.find((b) => b.type === "start");
+  if (!startBlock) return { blocks: allBlocks, edges: allEdges };
+
+  // Build adjacency: edges + parent→child relationships
+  const adj = new Map<string, string[]>();
+  for (const b of allBlocks) adj.set(b.id, []);
+  for (const e of allEdges) adj.get(e.source)?.push(e.target);
+  for (const b of allBlocks) {
+    if (b.parentId) adj.get(b.parentId)?.push(b.id);
+  }
+
+  // BFS from start
+  const reachable = new Set<string>();
+  const queue = [startBlock.id];
+  reachable.add(startBlock.id);
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const neighbor of adj.get(current) ?? []) {
+      if (!reachable.has(neighbor)) {
+        reachable.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return {
+    blocks: allBlocks.filter((b) => reachable.has(b.id)),
+    edges: allEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target)),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Handler factory
 // ---------------------------------------------------------------------------
 
@@ -135,9 +189,8 @@ export function createHandlers(
       const limit = args.limit ?? 20;
       const offset = args.offset ?? 0;
       const response = await client.listProjects(limit, offset);
-      const total = response.projectCount;
       return formatToolResponse({
-        flows: response.projects.map((p) => ({
+        flows: response.data.map((p) => ({
           id: p.ID,
           title: p.Title,
           block_count: p.BlockCount,
@@ -145,8 +198,8 @@ export function createHandlers(
           created_at: p.CreatedAt,
           updated_at: p.UpdatedAt,
         })),
-        total,
-        has_more: offset + limit < total,
+        total: response.pagination.total,
+        has_more: response.pagination.has_more,
       });
     });
   }
@@ -159,8 +212,6 @@ export function createHandlers(
       const resolved = await resolveFlowId(client, args.flow);
       if ("error" in resolved) return resolved.error;
       const project = await client.getProject(resolved.id);
-      let blockCount = 0;
-      const blockTypes: string[] = [];
 
       // Data comes from the gateway as base64-encoded JSON or a raw JSON string
       let rawData: unknown = project.Data;
@@ -178,20 +229,44 @@ export function createHandlers(
           }
         }
       }
-      const flowData = rawData as { nodes?: Array<{ type?: string }> };
-      if (Array.isArray(flowData?.nodes)) {
-        blockCount = flowData.nodes.length;
-        const types = new Set(
-          flowData.nodes.map((n) => n.type).filter(Boolean) as string[],
-        );
-        blockTypes.push(...types);
+
+      interface FlowBlock {
+        id: string;
+        type?: string;
+        custom?: Record<string, unknown>;
+        parentId?: string;
       }
+      interface FlowEdge {
+        source: string;
+        target: string;
+      }
+      // ReactFlow stores blocks as "nodes" in JSON — we map to our terminology
+      const flowData = rawData as { nodes?: FlowBlock[]; edges?: FlowEdge[] };
+      const allBlocks = flowData?.nodes ?? [];
+      const allEdges = flowData?.edges ?? [];
+
+      // Prune unreachable blocks (BFS from start block, following edges + parentId)
+      const { blocks, edges } = pruneUnreachable(allBlocks, allEdges);
+
+      const blockTypes = [...new Set(
+        blocks.map((b) => b.type).filter(Boolean) as string[],
+      )];
 
       return formatToolResponse({
         id: project.ID,
         title: project.Title,
-        block_count: blockCount,
+        block_count: blocks.length,
         block_types: blockTypes,
+        blocks: blocks.map((b) => ({
+          id: b.id,
+          type: b.type,
+          custom: b.custom,
+          parent_id: b.parentId || undefined,
+        })),
+        edges: edges.map((e) => ({
+          source: e.source,
+          target: e.target,
+        })),
         created_at: project.CreatedAt,
         updated_at: project.UpdatedAt,
       });
@@ -422,7 +497,7 @@ export function createHandlers(
       });
 
       return formatToolResponse({
-        executions: response.executions.map((e) => ({
+        executions: response.data.map((e) => ({
           id: e.id,
           flow_id: e.projectId,
           flow_title: e.projectTitle,
@@ -432,8 +507,8 @@ export function createHandlers(
           duration_ms: e.durationMs,
           credits_used: e.creditsUsed,
         })),
-        total: response.total,
-        has_more: offset + limit < response.total,
+        total: response.pagination.total,
+        has_more: response.pagination.has_more,
       });
     });
   }

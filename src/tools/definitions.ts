@@ -25,9 +25,10 @@ export const toolDefinitions = [
   {
     name: "scrapeer_get_flow",
     description:
-      "Get details about a specific scraping flow — what blocks it contains, when it was last modified. " +
+      "Get details about a specific scraping flow — its blocks (with full config, selectors, and variables), edges, and metadata. " +
       "Accepts either a flow ID (UUID) or a flow name. " +
-      "USE THIS TOOL WHEN: you know which flow you want details about (by name or ID). " +
+      "NOTE: Only blocks reachable from the Start block are returned. Orphaned/disconnected blocks on the canvas are pruned. " +
+      "USE THIS TOOL WHEN: you know which flow you want details about (by name or ID), you need to inspect selectors or block config, or you're debugging a flow. " +
       "DO NOT USE: to list all flows (use scrapeer_list_flows).",
     inputSchema: getFlowInput,
     annotations: {
