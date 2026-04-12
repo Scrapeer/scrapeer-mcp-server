@@ -460,6 +460,41 @@ describe("getRunSteps", () => {
     expect(data.steps[0].block_type).toBe("navigate");
     expect(data.steps[0].duration_ms).toBe(5000); // 5s between startedAt and endedAt
   });
+
+  it("returns an empty steps array when the gateway response has no steps field", async () => {
+    // Regression: previously crashed with "Cannot read properties of undefined
+    // (reading 'map')" when the gateway returned a body without a steps key
+    // (e.g., for a completed run that recorded no steps).
+    server.use(
+      http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
+        HttpResponse.json({}),
+      ),
+    );
+
+    const handlers = makeHandlers();
+    const result = await handlers.getRunSteps({
+      execution_id: "exec-1111-2222-3333-444444444444",
+    });
+    const data = parseContent(result) as { steps: unknown[] };
+
+    expect(data.steps).toEqual([]);
+  });
+
+  it("returns an empty steps array when the gateway returns steps: null", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
+        HttpResponse.json({ steps: null }),
+      ),
+    );
+
+    const handlers = makeHandlers();
+    const result = await handlers.getRunSteps({
+      execution_id: "exec-1111-2222-3333-444444444444",
+    });
+    const data = parseContent(result) as { steps: unknown[] };
+
+    expect(data.steps).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------

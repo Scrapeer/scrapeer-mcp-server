@@ -341,7 +341,7 @@ export function createHandlers(
               summary,
               credits_used: execution.creditsUsed,
               duration_ms: execution.durationMs,
-              steps: steps.steps.map((s) => ({
+              steps: (steps.steps ?? []).map((s) => ({
                 block_id: s.blockId,
                 block_type: s.blockType,
                 label: s.label,
@@ -366,7 +366,7 @@ export function createHandlers(
             error: execution.error,
             credits_used: execution.creditsUsed,
             duration_ms: execution.durationMs,
-            steps: steps.steps.map((s) => ({
+            steps: (steps.steps ?? []).map((s) => ({
               block_id: s.blockId,
               block_type: s.blockType,
               label: s.label,
@@ -455,7 +455,7 @@ export function createHandlers(
     return withErrorHandling(async () => {
       const response = await client.getExecutionSteps(args.execution_id);
       return formatToolResponse({
-        steps: response.steps.map((s) => ({
+        steps: (response.steps ?? []).map((s) => ({
           block_id: s.blockId,
           block_type: s.blockType,
           label: s.label,
