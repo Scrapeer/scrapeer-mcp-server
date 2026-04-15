@@ -33,6 +33,40 @@ export interface RunResponse {
   run_id: string;
 }
 
+// Cloud Run Inspector envelope — field names mirror the worker source of truth
+// at scrapeer-worker/src/inspector/previewEnvelope.ts. Keep in sync when the
+// worker envelope shape evolves.
+export type PreviewEnvelope =
+  | {
+      kind: "single";
+      data: unknown;
+      truncated: boolean;
+      truncationMeta?: {
+        originalItemCount?: number;
+        originalBytes?: number;
+      };
+    }
+  | {
+      kind: "iterated";
+      iterations: Array<{
+        loopContext: Array<{ loopBlockId: string; iteration: number }>;
+        data: unknown;
+        truncated: boolean;
+        truncationMeta?: {
+          originalItemCount?: number;
+          originalBytes?: number;
+        };
+      }>;
+      iterationsTruncated: boolean;
+    };
+
+export interface ExecutionBlockPreview {
+  blockId: string;
+  loopContextHash?: string;
+  outputPreview: PreviewEnvelope;
+  previewTruncated: boolean;
+}
+
 export interface ExecutionResponse {
   id: string;
   projectId: string | null;
@@ -46,7 +80,9 @@ export interface ExecutionResponse {
   durationMs: number | null;
   creditsUsed: number | null;
   error: { code: string; message: string } | null;
-  data: Record<string, unknown> | null;
+  workflowId?: string;
+  variables?: Record<string, unknown> | null;
+  blockPreviews?: ExecutionBlockPreview[];
 }
 
 export interface ExecutionStepsResponse {

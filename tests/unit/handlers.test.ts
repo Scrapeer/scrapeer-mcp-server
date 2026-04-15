@@ -66,7 +66,21 @@ function makeExecution(overrides: Record<string, unknown> = {}) {
     durationMs: 60000,
     creditsUsed: 5,
     error: null,
-    data: { rows: [{ name: "Alice" }] },
+    variables: { items: [{ name: "Alice" }] },
+    ...overrides,
+  };
+}
+
+function makeBlockPreview(overrides: Record<string, unknown> = {}) {
+  return {
+    blockId: "extract-1",
+    loopContextHash: "",
+    outputPreview: {
+      kind: "single",
+      data: [{ title: "product A", price: 19.99 }],
+      truncated: false,
+    },
+    previewTruncated: false,
     ...overrides,
   };
 }
@@ -249,7 +263,7 @@ describe("runFlow", () => {
 // ---------------------------------------------------------------------------
 
 describe("runFlowAndWait", () => {
-  it("polls until completion and returns results with anti-injection wrapper", async () => {
+  it("polls until completion and returns results with anti-injection wrapper carrying variables + block_previews", async () => {
     let pollCount = 0;
 
     server.use(
@@ -266,7 +280,10 @@ describe("runFlowAndWait", () => {
         if (pollCount < 2) {
           return HttpResponse.json(makeExecution({ status: "started" }));
         }
-        return HttpResponse.json(makeExecution({ status: "completed" }));
+        return HttpResponse.json({
+          ...makeExecution({ status: "completed" }),
+          blockPreviews: [makeBlockPreview({ blockId: "block-1" })],
+        });
       }),
       http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
         HttpResponse.json(makeSteps()),
@@ -285,12 +302,18 @@ describe("runFlowAndWait", () => {
       execution_id: string;
       status: string;
       data: string;
+      steps: Array<{ block_id: string; has_preview: boolean }>;
     };
     expect(data.status).toBe("completed");
     expect(data.execution_id).toBe("exec-aaaa-bbbb-cccc-dddddddddddd");
-    // Anti-injection wrapper applied to data field
+    // Untrusted bag now carries both variables and block_previews.
     expect(typeof data.data).toBe("string");
     expect(data.data).toContain("<untrusted-scraped-data-");
+    expect(data.data).toContain("\"variables\"");
+    expect(data.data).toContain("\"block_previews\"");
+    // has_preview is annotated inline on each step via the detail endpoint.
+    expect(data.steps[0].block_id).toBe("block-1");
+    expect(data.steps[0].has_preview).toBe(true);
   });
 
   it("returns timeout message (not error) when exceeding timeout", async () => {
@@ -415,10 +438,13 @@ describe("getRunStatus", () => {
 // ---------------------------------------------------------------------------
 
 describe("getRunResults", () => {
-  it("wraps data in anti-injection wrapper", async () => {
+  it("wraps variables + block_previews in the anti-injection bag", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
-        HttpResponse.json(makeExecution()),
+        HttpResponse.json({
+          ...makeExecution(),
+          blockPreviews: [makeBlockPreview()],
+        }),
       ),
     );
 
@@ -431,7 +457,52 @@ describe("getRunResults", () => {
     const data = JSON.parse(text) as { data: string; status: string };
     expect(data.status).toBe("completed");
     expect(typeof data.data).toBe("string");
+    // Untrusted bag carries both variables and block_previews so the LLM
+    // sees tampered-content inside the anti-injection boundary.
     expect(data.data).toContain("<untrusted-scraped-data-");
+    expect(data.data).toContain("\"variables\"");
+    expect(data.data).toContain("\"block_previews\"");
+    expect(data.data).toContain("product A");
+    expect(data.data).toContain("Alice");
+  });
+
+  it("degrades gracefully when variables is null (pre-Inspector run)", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json({
+          ...makeExecution({ variables: null }),
+        }),
+      ),
+    );
+
+    const handlers = makeHandlers();
+    const result = await handlers.getRunResults({
+      execution_id: "exec-1111-2222-3333-444444444444",
+    });
+
+    const text = result.content[0].text;
+    const data = JSON.parse(text) as { data: string; status: string };
+    expect(data.status).toBe("completed");
+    // Empty variables → {} inside the untrusted bag; block_previews → [].
+    expect(data.data).toContain("\"variables\": {}");
+    expect(data.data).toContain("\"block_previews\": []");
+  });
+
+  it("handles undefined blockPreviews (Free tier path)", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json(makeExecution()),
+      ),
+    );
+
+    const handlers = makeHandlers();
+    const result = await handlers.getRunResults({
+      execution_id: "exec-1111-2222-3333-444444444444",
+    });
+
+    const text = result.content[0].text;
+    const data = JSON.parse(text) as { data: string };
+    expect(data.data).toContain("\"block_previews\": []");
   });
 });
 
@@ -440,10 +511,13 @@ describe("getRunResults", () => {
 // ---------------------------------------------------------------------------
 
 describe("getRunSteps", () => {
-  it("maps camelCase gateway fields to snake_case MCP fields", async () => {
+  it("maps camelCase gateway fields to snake_case MCP fields and tags has_preview=false when no previews exist", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
         HttpResponse.json(makeSteps()),
+      ),
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json(makeExecution()),
       ),
     );
 
@@ -452,13 +526,72 @@ describe("getRunSteps", () => {
       execution_id: "exec-1111-2222-3333-444444444444",
     });
     const data = parseContent(result) as {
-      steps: Array<{ block_id: string; block_type: string; duration_ms: number }>;
+      steps: Array<{
+        block_id: string;
+        block_type: string;
+        duration_ms: number;
+        has_preview: boolean;
+      }>;
     };
 
     expect(data.steps).toHaveLength(1);
     expect(data.steps[0].block_id).toBe("block-1");
     expect(data.steps[0].block_type).toBe("navigate");
     expect(data.steps[0].duration_ms).toBe(5000); // 5s between startedAt and endedAt
+    expect(data.steps[0].has_preview).toBe(false);
+  });
+
+  it("tags steps with has_preview=true when the detail endpoint reports a matching block envelope", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
+        HttpResponse.json({
+          steps: [
+            {
+              id: "step-1",
+              blockId: "extract-1",
+              blockType: "extractData",
+              label: "Extract",
+              status: "completed",
+              startedAt: "2026-01-01T00:00:00Z",
+              endedAt: "2026-01-01T00:00:05Z",
+              stepIndex: 0,
+              error: null,
+            },
+            {
+              id: "step-2",
+              blockId: "navigate-1",
+              blockType: "goToUrl",
+              label: "Navigate",
+              status: "completed",
+              startedAt: "2026-01-01T00:00:00Z",
+              endedAt: "2026-01-01T00:00:05Z",
+              stepIndex: 1,
+              error: null,
+            },
+          ],
+        }),
+      ),
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json({
+          ...makeExecution(),
+          blockPreviews: [makeBlockPreview({ blockId: "extract-1" })],
+        }),
+      ),
+    );
+
+    const handlers = makeHandlers();
+    const result = await handlers.getRunSteps({
+      execution_id: "exec-1111-2222-3333-444444444444",
+    });
+    const data = parseContent(result) as {
+      steps: Array<{ block_id: string; has_preview: boolean }>;
+    };
+
+    expect(data.steps).toHaveLength(2);
+    const extract = data.steps.find((s) => s.block_id === "extract-1");
+    const navigate = data.steps.find((s) => s.block_id === "navigate-1");
+    expect(extract?.has_preview).toBe(true);
+    expect(navigate?.has_preview).toBe(false);
   });
 
   it("returns an empty steps array when the gateway response has no steps field", async () => {
@@ -468,6 +601,9 @@ describe("getRunSteps", () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
         HttpResponse.json({}),
+      ),
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json(makeExecution()),
       ),
     );
 
@@ -485,6 +621,9 @@ describe("getRunSteps", () => {
       http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
         HttpResponse.json({ steps: null }),
       ),
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json(makeExecution()),
+      ),
     );
 
     const handlers = makeHandlers();
@@ -494,6 +633,46 @@ describe("getRunSteps", () => {
     const data = parseContent(result) as { steps: unknown[] };
 
     expect(data.steps).toEqual([]);
+  });
+
+  it("returns steps with has_preview=false when the detail endpoint fails transiently", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/v1/executions/:id/steps`, () =>
+        HttpResponse.json({
+          steps: [
+            {
+              id: "step-1",
+              blockId: "extract-1",
+              blockType: "extractData",
+              label: "Extract",
+              status: "completed",
+              startedAt: "2026-01-01T00:00:00Z",
+              endedAt: "2026-01-01T00:00:05Z",
+              stepIndex: 0,
+              error: null,
+            },
+          ],
+        }),
+      ),
+      http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
+        HttpResponse.json({}, { status: 500 }),
+      ),
+    );
+
+    const handlers = makeHandlers();
+    const result = await handlers.getRunSteps({
+      execution_id: "exec-1111-2222-3333-444444444444",
+    });
+
+    // Steps are returned despite the detail endpoint failing.
+    expect((result as { isError?: boolean }).isError).toBeUndefined();
+    const data = parseContent(result) as {
+      steps: Array<{ block_id: string; has_preview: boolean }>;
+    };
+    expect(data.steps).toHaveLength(1);
+    expect(data.steps[0].block_id).toBe("extract-1");
+    // Degraded: no preview data available, has_preview defaults to false.
+    expect(data.steps[0].has_preview).toBe(false);
   });
 });
 
@@ -628,8 +807,8 @@ describe("cancelRun", () => {
   it("returns error when workflow_id is not available", async () => {
     server.use(
       http.get(`${BASE_URL}/api/v1/executions/:id`, () =>
-        // No workflowId field, no workflow_id in data
-        HttpResponse.json(makeExecution({ data: {} })),
+        // No workflowId field on the detail response.
+        HttpResponse.json(makeExecution()),
       ),
     );
 

@@ -86,10 +86,14 @@ export const toolDefinitions = [
   {
     name: "scrapeer_get_run_results",
     description:
-      "Get structured output data from a completed run. " +
-      "USE THIS TOOL WHEN: scrapeer_get_run_status shows \"completed\" and you need the scraped data. " +
+      "Get the variables and per-block output previews from a completed run. " +
+      "USE THIS TOOL WHEN: scrapeer_get_run_status shows \"completed\" and you need the scraped output. " +
       "DO NOT USE: if the run is still active (check status first). " +
-      "Returns the extracted data from all data-extraction blocks in the flow.",
+      "Returns the final variables map (scraped values written by Extract/Collect/Variable blocks) " +
+      "and block_previews — one envelope per block at the (blockId, loopContextHash) grain. " +
+      "Each envelope is {kind:\"single\", data, truncated} for non-looped blocks or " +
+      "{kind:\"iterated\", iterations:[...], iterationsTruncated} for blocks that ran inside a loop. " +
+      "Subscription tier controls preview availability: Free tier returns empty block_previews.",
     inputSchema: executionIdInput,
     annotations: {
       readOnlyHint: true,
@@ -102,8 +106,9 @@ export const toolDefinitions = [
     description:
       "Get block-by-block execution breakdown of a run. " +
       "USE THIS TOOL WHEN: a run failed and you need to know which block caused the error, " +
-      "or you want to understand execution timing. " +
-      "DO NOT USE: to get scraped data (use scrapeer_get_run_results).",
+      "or you want to understand execution timing, or you want to see which blocks have preview envelopes before calling scrapeer_get_run_results. " +
+      "DO NOT USE: to get the actual scraped values (use scrapeer_get_run_results). " +
+      "Each step includes has_preview — true when that block produced an envelope the detail endpoint is carrying.",
     inputSchema: executionIdInput,
     annotations: {
       readOnlyHint: true,

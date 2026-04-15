@@ -323,13 +323,16 @@ export function createHandlers(
         if (status === "completed") {
           const steps = await client.getExecutionSteps(executionId);
 
-          // Build human-readable summary
           const durationSec = execution.durationMs ? Math.round(execution.durationMs / 1000) : 0;
-          const dataObj = execution.data ?? {};
-          const itemCount = Array.isArray(dataObj) ? dataObj.length
-            : typeof dataObj === "object" ? Object.keys(dataObj).length : 0;
+          const variables = execution.variables ?? {};
+          const itemCount =
+            typeof variables === "object" && variables !== null
+              ? Object.keys(variables).length
+              : 0;
+          const blockPreviews = execution.blockPreviews ?? [];
+          const previewBlockIds = new Set(blockPreviews.map((p) => p.blockId));
           const summaryParts = [];
-          if (itemCount > 0) summaryParts.push(`${itemCount} data item${itemCount !== 1 ? "s" : ""}`);
+          if (itemCount > 0) summaryParts.push(`${itemCount} variable${itemCount !== 1 ? "s" : ""}`);
           summaryParts.push(`${durationSec}s`);
           if (execution.creditsUsed) summaryParts.push(`${execution.creditsUsed} credits`);
           const summary = `Completed: ${summaryParts.join(", ")}`;
@@ -352,9 +355,13 @@ export function createHandlers(
                       new Date(s.startedAt).getTime()
                     : null,
                 error: s.error,
+                has_preview: previewBlockIds.has(s.blockId),
               })),
             },
-            execution.data,
+            {
+              variables,
+              block_previews: blockPreviews,
+            },
           );
         }
 
@@ -443,7 +450,10 @@ export function createHandlers(
           credits_used: execution.creditsUsed,
           duration_ms: execution.durationMs,
         },
-        execution.data,
+        {
+          variables: execution.variables ?? {},
+          block_previews: execution.blockPreviews ?? [],
+        },
       );
     });
   }
@@ -453,7 +463,18 @@ export function createHandlers(
   // -------------------------------------------------------------------------
   async function getRunSteps(args: z.infer<typeof executionIdInput>): Promise<ToolResult> {
     return withErrorHandling(async () => {
-      const response = await client.getExecutionSteps(args.execution_id);
+      // Detail endpoint carries blockPreviews at (blockId, loopContextHash) grain.
+      // Fetched in parallel with steps so each row can be tagged has_preview,
+      // giving the LLM a cheap hint for whether to call scrapeer_get_run_results.
+      // The detail fetch is best-effort: a transient error degrades has_preview to
+      // false for all steps rather than discarding the steps result entirely.
+      const [response, executionResult] = await Promise.all([
+        client.getExecutionSteps(args.execution_id),
+        client.getExecution(args.execution_id).catch(() => null),
+      ]);
+      const previewBlockIds = new Set(
+        (executionResult?.blockPreviews ?? []).map((p) => p.blockId),
+      );
       return formatToolResponse({
         steps: (response.steps ?? []).map((s) => ({
           block_id: s.blockId,
@@ -466,6 +487,7 @@ export function createHandlers(
                 new Date(s.startedAt).getTime()
               : null,
           error: s.error,
+          has_preview: previewBlockIds.has(s.blockId),
         })),
       });
     });
@@ -520,18 +542,13 @@ export function createHandlers(
     return withErrorHandling(async () => {
       const execution = await client.getExecution(args.execution_id);
 
-      // Resolve workflow_id from execution response (field may appear in different positions)
-      const workflowId =
-        ((execution as unknown as Record<string, unknown>).workflowId as string | undefined) ??
-        (execution.data?.workflow_id as string | undefined);
-
-      if (!workflowId) {
+      if (!execution.workflowId) {
         return formatErrorResponse(
           "Cannot cancel this run — workflow ID not found.",
         );
       }
 
-      await client.cancelRun(workflowId);
+      await client.cancelRun(execution.workflowId);
       return formatToolResponse({
         execution_id: args.execution_id,
         status: "cancelled",
