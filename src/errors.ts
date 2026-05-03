@@ -57,6 +57,26 @@ export class GatewayError extends ScrapeerError {
 }
 
 /**
+ * 409 Conflict — the flow was modified between the caller's last
+ * `get_flow` and this save/patch attempt. Carries the server's current
+ * event_id so the caller can refetch and retry. The MCP layer uses this
+ * to invalidate its event_id cache and surface a structured retry hint
+ * to the model.
+ */
+export class FlowConflictError extends ScrapeerError {
+  readonly currentProjectEventID: string | null;
+
+  constructor(currentProjectEventID: string | null) {
+    super(
+      "The flow was modified by another caller (another tab, an MCP tool, or a scheduled run). " +
+        "Re-fetch the flow with scrapeer_get_flow to see the current version, then retry the patch or update.",
+      409,
+    );
+    this.currentProjectEventID = currentProjectEventID;
+  }
+}
+
+/**
  * Parse the API error envelope from the response body.
  * Returns the error code if the body matches the envelope format, otherwise null.
  * Envelope format: {"error": {"code": "unauthorized", "message": "...", ...}}
@@ -111,6 +131,26 @@ export function classifyHttpError(status: number, body: string): ScrapeerError {
       return new ForbiddenError();
     case 404:
       return new FlowNotFoundError();
+    case 409: {
+      // Optimistic concurrency conflict on flow save/patch. Pull the
+      // current event_id out of the body so the caller can refetch.
+      let currentEventID: string | null = null;
+      try {
+        const parsed = JSON.parse(body);
+        if (typeof parsed?.currentProjectEventID === "string") {
+          currentEventID = parsed.currentProjectEventID;
+        }
+      } catch {
+        // Body wasn't JSON — leave currentEventID null; the caller
+        // still gets the structured error and message.
+      }
+      return new FlowConflictError(currentEventID);
+    }
+    case 413:
+      return new ScrapeerError(
+        "Flow payload is too large for the gateway. Reduce the flow size or break the change into smaller patches.",
+        413,
+      );
     case 429:
       return new RateLimitedError();
     default:

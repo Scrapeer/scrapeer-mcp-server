@@ -13,7 +13,17 @@ import type {
   runFlowAndWaitInput,
   executionIdInput,
   listRunsInput,
+  getBlockCatalogInput,
+  validateFlowInput,
+  createFlowInput,
+  updateFlowInput,
+  patchFlowInput,
 } from "./schemas.js";
+import type {
+  FlowPayload,
+  PatchOperationPayload,
+} from "../client.js";
+import { FlowConflictError } from "../errors.js";
 
 // ---------------------------------------------------------------------------
 // Status normalization
@@ -578,6 +588,131 @@ export function createHandlers(
     });
   }
 
+  // -------------------------------------------------------------------------
+  // scrapeer_get_block_catalog
+  // -------------------------------------------------------------------------
+  async function getBlockCatalog(
+    _args: z.infer<typeof getBlockCatalogInput>,
+  ): Promise<ToolResult> {
+    return withErrorHandling(async () => {
+      const catalog = await client.getBlockCatalog();
+      return formatToolResponse({
+        version: catalog.version,
+        block_count: catalog.blocks.length,
+        blocks: catalog.blocks,
+      });
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // scrapeer_validate_flow
+  // -------------------------------------------------------------------------
+  async function validateFlow(
+    args: z.infer<typeof validateFlowInput>,
+  ): Promise<ToolResult> {
+    return withErrorHandling(async () => {
+      // Cast through unknown — Zod widens nodes/edges to record<unknown>,
+      // which is wider than the FlowPayload field types. Trust the
+      // gateway validator to enforce real shape.
+      const result = await client.validateFlow(args.flow as unknown as FlowPayload);
+      return formatToolResponse({
+        ok: result.ok,
+        errors: result.errors ?? [],
+        warnings: result.warnings ?? [],
+      });
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // scrapeer_create_flow
+  // -------------------------------------------------------------------------
+  async function createFlow(
+    args: z.infer<typeof createFlowInput>,
+  ): Promise<ToolResult> {
+    return withErrorHandling(async () => {
+      const result = await client.createProject(args.title);
+      return formatToolResponse({
+        flow_id: result.projectId,
+        title: args.title,
+        message:
+          "Flow created. Add blocks with scrapeer_patch_flow (preferred for incremental edits) or scrapeer_update_flow (whole-flow replacement).",
+      });
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // scrapeer_update_flow
+  // -------------------------------------------------------------------------
+  async function updateFlow(
+    args: z.infer<typeof updateFlowInput>,
+  ): Promise<ToolResult> {
+    return withErrorHandling(async () => {
+      const resolved = await resolveFlowId(client, args.flow);
+      if ("error" in resolved) return resolved.error;
+
+      try {
+        const result = await client.saveProjectData(
+          resolved.id,
+          args.data as unknown as FlowPayload,
+          args.baseProjectEventID,
+        );
+        return formatToolResponse({
+          flow_id: resolved.id,
+          new_event_id: result.projectEventID,
+          message: result.message,
+        });
+      } catch (err) {
+        if (err instanceof FlowConflictError) {
+          return formatErrorResponse(
+            `${err.message}` +
+              (err.currentProjectEventID
+                ? ` Server's current event_id: ${err.currentProjectEventID}.`
+                : ""),
+          );
+        }
+        throw err;
+      }
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // scrapeer_patch_flow
+  // -------------------------------------------------------------------------
+  async function patchFlow(
+    args: z.infer<typeof patchFlowInput>,
+  ): Promise<ToolResult> {
+    return withErrorHandling(async () => {
+      const resolved = await resolveFlowId(client, args.flow);
+      if ("error" in resolved) return resolved.error;
+
+      try {
+        const result = await client.patchProject(
+          resolved.id,
+          args.operations as unknown as PatchOperationPayload[],
+          args.baseProjectEventID,
+        );
+        return formatToolResponse({
+          flow_id: resolved.id,
+          new_event_id: result.projectEventID,
+          operations_applied: result.operationSummaries.length,
+          summaries: result.operationSummaries,
+          flow: result.flow,
+          message: result.message,
+        });
+      } catch (err) {
+        if (err instanceof FlowConflictError) {
+          return formatErrorResponse(
+            `${err.message}` +
+              (err.currentProjectEventID
+                ? ` Server's current event_id: ${err.currentProjectEventID}.`
+                : ""),
+          );
+        }
+        throw err;
+      }
+    });
+  }
+
   return {
     listFlows,
     getFlow,
@@ -589,5 +724,10 @@ export function createHandlers(
     getRunSteps,
     listRuns,
     cancelRun,
+    getBlockCatalog,
+    validateFlow,
+    createFlow,
+    updateFlow,
+    patchFlow,
   };
 }

@@ -34,6 +34,11 @@ const TOOL_TO_HANDLER: Record<string, keyof typeof handlers> = {
   scrapeer_get_run_steps: "getRunSteps",
   scrapeer_list_runs: "listRuns",
   scrapeer_cancel_run: "cancelRun",
+  scrapeer_get_block_catalog: "getBlockCatalog",
+  scrapeer_validate_flow: "validateFlow",
+  scrapeer_create_flow: "createFlow",
+  scrapeer_update_flow: "updateFlow",
+  scrapeer_patch_flow: "patchFlow",
 };
 
 const server = new McpServer({

@@ -6,6 +6,11 @@ import {
   runFlowAndWaitInput,
   executionIdInput,
   listRunsInput,
+  getBlockCatalogInput,
+  validateFlowInput,
+  createFlowInput,
+  updateFlowInput,
+  patchFlowInput,
 } from "./schemas.js";
 
 export const toolDefinitions = [
@@ -156,6 +161,80 @@ export const toolDefinitions = [
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
+    },
+  },
+  {
+    name: "scrapeer_get_block_catalog",
+    description:
+      "List the block types available for use in flows, with their custom-field schemas. " +
+      "USE THIS TOOL WHEN: you are about to create or modify a flow and need to know which block types exist, what their type strings are (e.g. `clickElement`, `extractText`), and what config fields each block accepts. " +
+      "ALWAYS call this BEFORE scrapeer_create_flow, scrapeer_update_flow, or scrapeer_patch_flow — guessing block types or config keys leads to validation failures. " +
+      "DO NOT USE: to read an existing flow's blocks (use scrapeer_get_flow).",
+    inputSchema: getBlockCatalogInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    },
+  },
+  {
+    name: "scrapeer_validate_flow",
+    description:
+      "Dry-run validate a flow without saving it. " +
+      "USE THIS TOOL WHEN: you've constructed a flow and want to check whether it will be accepted by the gateway before calling scrapeer_create_flow / scrapeer_update_flow. " +
+      "Returns { ok, errors[], warnings[] }. Errors block save; warnings are advisory. " +
+      "DO NOT USE: to validate a stored flow (no persistent flow lookup — pass the flow JSON directly).",
+    inputSchema: validateFlowInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+    },
+  },
+  {
+    name: "scrapeer_create_flow",
+    description:
+      "Create a new (empty) flow with the given title. " +
+      "Returns the new flow's ID. Use scrapeer_update_flow or scrapeer_patch_flow afterwards to add blocks. " +
+      "USE THIS TOOL WHEN: the user asks to create a new automation/scraper. " +
+      "DO NOT USE: to overwrite an existing flow's data (use scrapeer_update_flow with the existing flow's ID).",
+    inputSchema: createFlowInput,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+    },
+  },
+  {
+    name: "scrapeer_update_flow",
+    description:
+      "Replace a flow's entire definition with the supplied flow JSON. " +
+      "WARNING: this overwrites the WHOLE flow — every block, edge, and config. " +
+      "PREFER scrapeer_patch_flow for incremental edits (adding a block, changing one selector). " +
+      "USE THIS TOOL WHEN: you need to apply a wholesale rewrite (e.g. importing a flow from elsewhere) or the change touches most of the flow at once. " +
+      "Always call scrapeer_get_block_catalog first to know valid block types and config keys, and consider scrapeer_validate_flow to dry-run. " +
+      "Optimistic concurrency: the MCP server automatically attaches the version stamp from your last scrapeer_get_flow on this flow. If the flow was modified elsewhere since, the call returns 409 — re-fetch with scrapeer_get_flow and retry.",
+    inputSchema: updateFlowInput,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+    },
+  },
+  {
+    name: "scrapeer_patch_flow",
+    description:
+      "Apply a list of granular patch operations to a flow's graph: add_block, update_block_custom, remove_block, add_edge, remove_edge. " +
+      "PREFERRED over scrapeer_update_flow for incremental edits — smaller blast radius and validated per-op server-side. " +
+      "USE THIS TOOL WHEN: making targeted changes (adding a block to an existing flow, fixing a selector, rewiring an edge). " +
+      "DO NOT USE: when the change touches most of the flow at once (use scrapeer_update_flow). " +
+      "Always call scrapeer_get_block_catalog first; ALWAYS call scrapeer_get_flow on this flow earlier in the session so the MCP server can attach the version stamp for optimistic concurrency. " +
+      "Returns the post-patch flow plus a summary of each operation's effect.",
+    inputSchema: patchFlowInput,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
     },
   },
 ] as const;

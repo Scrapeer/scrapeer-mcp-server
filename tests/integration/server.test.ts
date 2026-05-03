@@ -128,11 +128,12 @@ describe("MCP server integration", () => {
     expect(version?.version).toBe("0.1.0");
   });
 
-  it("tools/list returns all 9 tools", async () => {
+  it("tools/list returns all registered tools", async () => {
     const result = await client.listTools();
-    expect(result.tools).toHaveLength(10);
+    expect(result.tools).toHaveLength(15);
 
     const names = result.tools.map((t) => t.name);
+    // Read/run/account tools (shipped earlier)
     expect(names).toContain("scrapeer_list_flows");
     expect(names).toContain("scrapeer_get_flow");
     expect(names).toContain("scrapeer_run_flow");
@@ -142,6 +143,13 @@ describe("MCP server integration", () => {
     expect(names).toContain("scrapeer_get_run_steps");
     expect(names).toContain("scrapeer_list_runs");
     expect(names).toContain("scrapeer_cancel_run");
+    expect(names).toContain("scrapeer_get_account");
+    // Flow mutation tools
+    expect(names).toContain("scrapeer_get_block_catalog");
+    expect(names).toContain("scrapeer_validate_flow");
+    expect(names).toContain("scrapeer_create_flow");
+    expect(names).toContain("scrapeer_update_flow");
+    expect(names).toContain("scrapeer_patch_flow");
   });
 
   it("scrapeer_list_flows returns flows from mock gateway", async () => {
