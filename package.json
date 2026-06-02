@@ -1,6 +1,6 @@
 {
   "name": "@scrapeer/mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run Scrapeer visual web-scraping flows from AI agents",
   "mcpName": "com.scrapeer/mcp-server",
   "type": "module",

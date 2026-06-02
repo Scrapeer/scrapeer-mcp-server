@@ -43,7 +43,7 @@ const TOOL_TO_HANDLER: Record<string, keyof typeof handlers> = {
 
 const server = new McpServer({
   name: "scrapeer",
-  version: "0.1.0",
+  version: "0.1.1",
 });
 
 // Register all tools
