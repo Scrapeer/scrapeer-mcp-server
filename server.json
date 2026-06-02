@@ -24,13 +24,6 @@
           "isRequired": true,
           "format": "string",
           "isSecret": true
-        },
-        {
-          "name": "SCRAPEER_BASE_URL",
-          "description": "Optional Scrapeer API base URL override for staging or self-hosted environments.",
-          "isRequired": false,
-          "format": "string",
-          "isSecret": false
         }
       ]
     }

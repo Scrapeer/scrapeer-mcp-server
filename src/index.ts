@@ -7,14 +7,14 @@ import { toolDefinitions } from "./tools/definitions.js";
 import { createHandlers } from "./tools/handlers.js";
 
 const API_KEY = process.env.SCRAPEER_API_KEY;
-const BASE_URL = process.env.SCRAPEER_BASE_URL ?? "https://api.scrapeer.com";
+const BASE_URL = "https://auth.scrapeer.com";
 
 if (!API_KEY) {
   process.stderr.write(
     "Error: SCRAPEER_API_KEY environment variable is required.\n" +
       "Generate one at https://app.scrapeer.com/settings\n\n" +
       "Usage:\n" +
-      "  SCRAPEER_API_KEY=sk_... pnpx @scrapeer/mcp-server\n",
+      "  SCRAPEER_API_KEY=sk_... npx -y @scrapeer/mcp-server\n",
   );
   process.exit(1);
 }
@@ -67,4 +67,14 @@ for (const def of toolDefinitions) {
 }
 
 const transport = new StdioServerTransport();
+process.stdin.resume();
+// Keep the stdio server alive until the MCP client terminates the process.
+const keepAlive = setInterval(() => undefined, 1_000_000_000);
+const shutdown = () => {
+  clearInterval(keepAlive);
+  void server.close().finally(() => process.exit(0));
+};
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
+
 await server.connect(transport);

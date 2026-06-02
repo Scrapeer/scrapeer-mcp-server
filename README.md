@@ -7,7 +7,7 @@
 <h1 align="center">Scrapeer MCP Server</h1>
 
 <p align="center">
-  Run Scrapeer visual web-scraping flows from Claude Code, Codex, Cursor, VS Code Copilot, and other MCP clients.
+  Run Scrapeer visual web-scraping flows from Claude Code, Codex, Cursor, and VS Code Copilot.
 </p>
 
 [Scrapeer](https://www.scrapeer.com) is a visual browser automation and web scraping platform for people who do not want to write scrapers from scratch. Build deterministic scraping workflows in a drag-and-drop editor, watch the browser run step by step, then run those same flows locally or in Scrapeer's cloud.
@@ -51,7 +51,7 @@ For a project-scoped Claude Code config, create `.mcp.json` in the project root:
 
 For a private user-scoped config, run `claude mcp add --scope user --env SCRAPEER_API_KEY=sk_... scrapeer -- npx -y @scrapeer/mcp-server` so Claude writes the correct `~/.claude.json` entry for your machine.
 
-### Codex CLI and IDE (`~/.codex/config.toml`)
+### Codex CLI and IDE extension (`~/.codex/config.toml`)
 
 ```toml
 [mcp_servers.scrapeer]
@@ -61,10 +61,6 @@ args = ["-y", "@scrapeer/mcp-server"]
 [mcp_servers.scrapeer.env]
 SCRAPEER_API_KEY = "sk_..."
 ```
-
-### ChatGPT
-
-ChatGPT MCP apps and custom connectors use a remote MCP endpoint, not a local stdio JSON file. Use the local stdio package above for Codex, Claude Code, Cursor, and VS Code. For ChatGPT, configure Scrapeer's hosted MCP endpoint as an app or custom connector when a remote endpoint is available.
 
 ### Cursor (`~/.cursor/mcp.json` or `.cursor/mcp.json`)
 
@@ -156,7 +152,6 @@ If a 409 fires, the cached event_id is invalidated automatically. Re-call `scrap
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `SCRAPEER_API_KEY` | Yes | - | API key from app.scrapeer.com/settings |
-| `SCRAPEER_BASE_URL` | No | `https://api.scrapeer.com` | Override for self-hosted or staging |
 
 ## Development
 

@@ -49,7 +49,7 @@ export const toolDefinitions = [
       "Accepts either a flow ID (UUID) or a flow name. " +
       "USE THIS TOOL WHEN: you want to start a run and manage polling yourself, or you want to trigger multiple runs in parallel. " +
       "DO NOT USE: if you want results in one call (use scrapeer_run_flow_and_wait instead). " +
-      "The run executes in the cloud and typically takes 30s-5min.",
+      "The run executes in Scrapeer's cloud.",
     inputSchema: runFlowInput,
     annotations: {
       readOnlyHint: false,
@@ -65,8 +65,7 @@ export const toolDefinitions = [
       "USE THIS TOOL WHEN: user says \"run my scraper\", \"scrape X\", \"execute my flow\", or you need data from a pre-built flow. " +
       "DO NOT USE: to check status of an already-running flow (use scrapeer_get_run_status), " +
       "to list available flows (use scrapeer_list_flows first to find the flow). " +
-      "Triggers a cloud run, polls until complete, returns structured results. " +
-      "Runs typically take 30s-5min. Each run costs credits.",
+      "Triggers a cloud run, polls until complete, and returns structured results.",
     inputSchema: runFlowAndWaitInput,
     annotations: {
       readOnlyHint: false,
@@ -97,8 +96,7 @@ export const toolDefinitions = [
       "Returns the final variables map (scraped values written by Extract/Collect/Variable blocks) " +
       "and block_previews - one envelope per block at the (blockId, loopContextHash) grain. " +
       "Each envelope is {kind:\"single\", data, truncated} for non-looped blocks or " +
-      "{kind:\"iterated\", iterations:[...], iterationsTruncated} for blocks that ran inside a loop. " +
-      "Subscription tier controls preview availability: Free tier returns empty block_previews.",
+      "{kind:\"iterated\", iterations:[...], iterationsTruncated} for blocks that ran inside a loop.",
     inputSchema: executionIdInput,
     annotations: {
       readOnlyHint: true,
@@ -112,8 +110,7 @@ export const toolDefinitions = [
       "Get block-by-block execution breakdown of a run. " +
       "USE THIS TOOL WHEN: a run failed and you need to know which block caused the error, " +
       "or you want to understand execution timing, or you want to see which blocks have preview envelopes before calling scrapeer_get_run_results. " +
-      "DO NOT USE: to get the actual scraped values (use scrapeer_get_run_results). " +
-      "Each step includes has_preview - true when that block produced an envelope the detail endpoint is carrying.",
+      "DO NOT USE: to get the actual scraped values (use scrapeer_get_run_results).",
     inputSchema: executionIdInput,
     annotations: {
       readOnlyHint: true,
