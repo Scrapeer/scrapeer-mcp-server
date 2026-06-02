@@ -125,7 +125,7 @@ async function resolveFlowId(
 }
 
 // ---------------------------------------------------------------------------
-// Prune unreachable blocks — mirrors gateway's PruneUnreachableBlocks (BFS)
+// Prune unreachable blocks - mirrors gateway's PruneUnreachableBlocks (BFS)
 // ---------------------------------------------------------------------------
 
 interface PrunableBlock {
@@ -149,7 +149,7 @@ function pruneUnreachable<
   const startBlock = allBlocks.find((b) => b.type === "start");
   if (!startBlock) return { blocks: allBlocks, edges: allEdges };
 
-  // Build adjacency: edges + parent→child relationships
+  // Build adjacency: edges + parent->child relationships
   const adj = new Map<string, string[]>();
   for (const b of allBlocks) adj.set(b.id, []);
   for (const e of allEdges) adj.get(e.source)?.push(e.target);
@@ -250,7 +250,7 @@ export function createHandlers(
         source: string;
         target: string;
       }
-      // ReactFlow stores blocks as "nodes" in JSON — we map to our terminology
+      // ReactFlow stores blocks as "nodes" in JSON - we map to our terminology
       const flowData = rawData as { nodes?: FlowBlock[]; edges?: FlowEdge[] };
       const allBlocks = flowData?.nodes ?? [];
       const allEdges = flowData?.edges ?? [];
@@ -510,7 +510,7 @@ export function createHandlers(
     return withErrorHandling(async () => {
       const limit = args.limit ?? 20;
       const offset = args.offset ?? 0;
-      // Map MCP "active" → gateway "started"
+      // Map MCP "active" -> gateway "started"
       const gatewayStatus = args.status === "active" ? "started" : args.status;
 
       // Resolve flow name to ID if provided
@@ -554,7 +554,7 @@ export function createHandlers(
 
       if (!execution.workflowId) {
         return formatErrorResponse(
-          "Cannot cancel this run — workflow ID not found.",
+          "Cannot cancel this run - workflow ID not found.",
         );
       }
 
@@ -611,7 +611,7 @@ export function createHandlers(
     args: z.infer<typeof validateFlowInput>,
   ): Promise<ToolResult> {
     return withErrorHandling(async () => {
-      // Cast through unknown — Zod widens nodes/edges to record<unknown>,
+      // Cast through unknown - Zod widens nodes/edges to record<unknown>,
       // which is wider than the FlowPayload field types. Trust the
       // gateway validator to enforce real shape.
       const result = await client.validateFlow(args.flow as unknown as FlowPayload);

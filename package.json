@@ -1,12 +1,17 @@
 {
   "name": "@scrapeer/mcp-server",
   "version": "0.1.0",
-  "description": "MCP server for Scrapeer — trigger scraping flows from AI agents",
+  "description": "Run Scrapeer visual web-scraping flows from AI agents",
+  "mcpName": "com.scrapeer/mcp-server",
   "type": "module",
   "bin": {
     "scrapeer-mcp-server": "dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "assets",
+    "server.json"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -15,19 +20,39 @@
     "test:watch": "vitest",
     "prepublishOnly": "pnpm run build"
   },
-  "keywords": ["mcp", "scrapeer", "scraping", "automation", "ai"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Scrapeer/scrapeer-mcp-server.git"
+  },
+  "homepage": "https://www.scrapeer.com",
+  "bugs": {
+    "url": "https://github.com/Scrapeer/scrapeer-mcp-server/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "scrapeer",
+    "scraping",
+    "web-scraping",
+    "browser-automation",
+    "automation",
+    "ai-agent"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "msw": "^2.7.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "vite": "^7.3.5",
+    "vitest": "^4.1.8"
   }
 }

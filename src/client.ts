@@ -66,7 +66,7 @@ export interface ValidateFlowResponse {
 }
 
 /**
- * Minimal ReactFlowJSON shape — enough to construct a flow body without
+ * Minimal ReactFlowJSON shape - enough to construct a flow body without
  * importing the full block schemas. Callers pass arbitrary nested
  * config under each block's `custom` field; the gateway's validator is
  * the source of truth for what's allowed.
@@ -137,7 +137,7 @@ export interface CreateProjectResponse {
   projectId: string;
   /**
    * Initial event_id of the freshly-created project. Cached by the
-   * client so the LLM can call create_flow → patch_flow without an
+   * client so the LLM can call create_flow -> patch_flow without an
    * intervening get_flow.
    */
   projectEventID: string;
@@ -149,7 +149,7 @@ export interface RunResponse {
   run_id: string;
 }
 
-// Cloud Run Inspector envelope — field names mirror the worker source of truth
+// Cloud Run Inspector envelope - field names mirror the worker source of truth
 // at scrapeer-worker/src/inspector/previewEnvelope.ts. Keep in sync when the
 // worker envelope shape evolves.
 export type PreviewEnvelope =
@@ -236,7 +236,7 @@ export class ScrapeerClient {
    * Populated by getProject (and refreshed by saveProjectData /
    * patchProject responses). update_flow / patch_flow read from here
    * to populate baseProjectEventID, so MCP-vs-anything concurrency
-   * is covered automatically — the LLM doesn't have to manage event
+   * is covered automatically - the LLM doesn't have to manage event
    * IDs by hand.
    *
    * Process-local. A fresh MCP server process starts with an empty
@@ -333,7 +333,7 @@ export class ScrapeerClient {
     baseProjectEventID?: string,
   ): Promise<ProjectSaveResponse> {
     const body: Record<string, unknown> = { id: projectId, data: flow };
-    // Send the cached event_id when available — this is what makes the
+    // Send the cached event_id when available - this is what makes the
     // server's optimistic-concurrency check fire for MCP-driven saves.
     const baseID = baseProjectEventID ?? this.eventIDCache.get(projectId);
     if (baseID) body.baseProjectEventID = baseID;

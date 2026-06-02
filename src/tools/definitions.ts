@@ -30,7 +30,7 @@ export const toolDefinitions = [
   {
     name: "scrapeer_get_flow",
     description:
-      "Get details about a specific scraping flow — its blocks (with full config, selectors, and variables), edges, and metadata. " +
+      "Get details about a specific scraping flow - its blocks (with full config, selectors, and variables), edges, and metadata. " +
       "Accepts either a flow ID (UUID) or a flow name. " +
       "NOTE: Only blocks reachable from the Start block are returned. Orphaned/disconnected blocks on the canvas are pruned. " +
       "USE THIS TOOL WHEN: you know which flow you want details about (by name or ID), you need to inspect selectors or block config, or you're debugging a flow. " +
@@ -95,7 +95,7 @@ export const toolDefinitions = [
       "USE THIS TOOL WHEN: scrapeer_get_run_status shows \"completed\" and you need the scraped output. " +
       "DO NOT USE: if the run is still active (check status first). " +
       "Returns the final variables map (scraped values written by Extract/Collect/Variable blocks) " +
-      "and block_previews — one envelope per block at the (blockId, loopContextHash) grain. " +
+      "and block_previews - one envelope per block at the (blockId, loopContextHash) grain. " +
       "Each envelope is {kind:\"single\", data, truncated} for non-looped blocks or " +
       "{kind:\"iterated\", iterations:[...], iterationsTruncated} for blocks that ran inside a loop. " +
       "Subscription tier controls preview availability: Free tier returns empty block_previews.",
@@ -113,7 +113,7 @@ export const toolDefinitions = [
       "USE THIS TOOL WHEN: a run failed and you need to know which block caused the error, " +
       "or you want to understand execution timing, or you want to see which blocks have preview envelopes before calling scrapeer_get_run_results. " +
       "DO NOT USE: to get the actual scraped values (use scrapeer_get_run_results). " +
-      "Each step includes has_preview — true when that block produced an envelope the detail endpoint is carrying.",
+      "Each step includes has_preview - true when that block produced an envelope the detail endpoint is carrying.",
     inputSchema: executionIdInput,
     annotations: {
       readOnlyHint: true,
@@ -152,7 +152,7 @@ export const toolDefinitions = [
   {
     name: "scrapeer_get_account",
     description:
-      "Get your Scrapeer account info — credit balance, subscription plan, and whether cloud runs are enabled. " +
+      "Get your Scrapeer account info - credit balance, subscription plan, and whether cloud runs are enabled. " +
       "USE THIS TOOL WHEN: you need to check if the user has enough credits before running a flow, " +
       "or the user asks about their plan, balance, or account status. " +
       "DO NOT USE: to list flows or runs.",
@@ -168,7 +168,7 @@ export const toolDefinitions = [
     description:
       "List the block types available for use in flows, with their custom-field schemas. " +
       "USE THIS TOOL WHEN: you are about to create or modify a flow and need to know which block types exist, what their type strings are (e.g. `clickElement`, `extractText`), and what config fields each block accepts. " +
-      "ALWAYS call this BEFORE scrapeer_create_flow, scrapeer_update_flow, or scrapeer_patch_flow — guessing block types or config keys leads to validation failures. " +
+      "ALWAYS call this BEFORE scrapeer_create_flow, scrapeer_update_flow, or scrapeer_patch_flow - guessing block types or config keys leads to validation failures. " +
       "DO NOT USE: to read an existing flow's blocks (use scrapeer_get_flow).",
     inputSchema: getBlockCatalogInput,
     annotations: {
@@ -183,7 +183,7 @@ export const toolDefinitions = [
       "Dry-run validate a flow without saving it. " +
       "USE THIS TOOL WHEN: you've constructed a flow and want to check whether it will be accepted by the gateway before calling scrapeer_create_flow / scrapeer_update_flow. " +
       "Returns { ok, errors[], warnings[] }. Errors block save; warnings are advisory. " +
-      "DO NOT USE: to validate a stored flow (no persistent flow lookup — pass the flow JSON directly).",
+      "DO NOT USE: to validate a stored flow (no persistent flow lookup - pass the flow JSON directly).",
     inputSchema: validateFlowInput,
     annotations: {
       readOnlyHint: true,
@@ -209,11 +209,11 @@ export const toolDefinitions = [
     name: "scrapeer_update_flow",
     description:
       "Replace a flow's entire definition with the supplied flow JSON. " +
-      "WARNING: this overwrites the WHOLE flow — every block, edge, and config. " +
+      "WARNING: this overwrites the WHOLE flow - every block, edge, and config. " +
       "PREFER scrapeer_patch_flow for incremental edits (adding a block, changing one selector). " +
       "USE THIS TOOL WHEN: you need to apply a wholesale rewrite (e.g. importing a flow from elsewhere) or the change touches most of the flow at once. " +
       "Always call scrapeer_get_block_catalog first to know valid block types and config keys, and consider scrapeer_validate_flow to dry-run. " +
-      "Optimistic concurrency: the MCP server automatically attaches the version stamp from your last scrapeer_get_flow on this flow. If the flow was modified elsewhere since, the call returns 409 — re-fetch with scrapeer_get_flow and retry.",
+      "Optimistic concurrency: the MCP server automatically attaches the version stamp from your last scrapeer_get_flow on this flow. If the flow was modified elsewhere since, the call returns 409 - re-fetch with scrapeer_get_flow and retry.",
     inputSchema: updateFlowInput,
     annotations: {
       readOnlyHint: false,
@@ -225,7 +225,7 @@ export const toolDefinitions = [
     name: "scrapeer_patch_flow",
     description:
       "Apply a list of granular patch operations to a flow's graph: add_block, update_block_custom, remove_block, add_edge, remove_edge. " +
-      "PREFERRED over scrapeer_update_flow for incremental edits — smaller blast radius and validated per-op server-side. " +
+      "PREFERRED over scrapeer_update_flow for incremental edits - smaller blast radius and validated per-op server-side. " +
       "USE THIS TOOL WHEN: making targeted changes (adding a block to an existing flow, fixing a selector, rewiring an edge). " +
       "DO NOT USE: when the change touches most of the flow at once (use scrapeer_update_flow). " +
       "Always call scrapeer_get_block_catalog first; ALWAYS call scrapeer_get_flow on this flow earlier in the session so the MCP server can attach the version stamp for optimistic concurrency. " +

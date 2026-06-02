@@ -1,0 +1,38 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.scrapeer/mcp-server",
+  "title": "Scrapeer",
+  "description": "Run Scrapeer visual web-scraping flows from AI agents.",
+  "repository": {
+    "url": "https://github.com/Scrapeer/scrapeer-mcp-server",
+    "source": "github"
+  },
+  "websiteUrl": "https://www.scrapeer.com",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@scrapeer/mcp-server",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SCRAPEER_API_KEY",
+          "description": "Scrapeer API key from https://app.scrapeer.com/settings",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "SCRAPEER_BASE_URL",
+          "description": "Optional Scrapeer API base URL override for staging or self-hosted environments.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

@@ -57,7 +57,7 @@ export class GatewayError extends ScrapeerError {
 }
 
 /**
- * 409 Conflict — the flow was modified between the caller's last
+ * 409 Conflict - the flow was modified between the caller's last
  * `get_flow` and this save/patch attempt. Carries the server's current
  * event_id so the caller can refetch and retry. The MCP layer uses this
  * to invalidate its event_id cache and surface a structured retry hint
@@ -88,7 +88,7 @@ function parseAPIErrorCode(body: string): string | null {
       return parsed.error.code;
     }
   } catch {
-    // Not JSON — fall through to status-based classification
+    // Not JSON - fall through to status-based classification
   }
   return null;
 }
@@ -141,7 +141,7 @@ export function classifyHttpError(status: number, body: string): ScrapeerError {
           currentEventID = parsed.currentProjectEventID;
         }
       } catch {
-        // Body wasn't JSON — leave currentEventID null; the caller
+        // Body wasn't JSON - leave currentEventID null; the caller
         // still gets the structured error and message.
       }
       return new FlowConflictError(currentEventID);

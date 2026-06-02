@@ -87,7 +87,7 @@ export const listRunsInput = z.object({
 // Flow mutation tools
 // ---------------------------------------------------------------------------
 
-// Loose flow shape — the LLM constructs a ReactFlowJSON; the gateway's
+// Loose flow shape - the LLM constructs a ReactFlowJSON; the gateway's
 // validator is the source of truth for what's allowed. Strict typing
 // here would just duplicate the catalog.
 const flowPayloadSchema = z
@@ -95,7 +95,7 @@ const flowPayloadSchema = z
     nodes: z
       .array(z.record(z.unknown()))
       .describe(
-        "Array of blocks (React Flow nodes). Each must have an `id`, a `type` from scrapeer_get_block_catalog, and a `custom` object with the block's config fields. Position fields (`position.x`, `position.y`) are optional — auto-layout fills them in.",
+        "Array of blocks (React Flow nodes). Each must have an `id`, a `type` from scrapeer_get_block_catalog, and a `custom` object with the block's config fields. Position fields (`position.x`, `position.y`) are optional - auto-layout fills them in.",
       ),
     edges: z
       .array(z.record(z.unknown()))
@@ -104,7 +104,7 @@ const flowPayloadSchema = z
       ),
   })
   .describe(
-    "ReactFlowJSON-style flow payload — the same shape returned by scrapeer_get_flow. Use scrapeer_validate_flow to dry-run before writing.",
+    "ReactFlowJSON-style flow payload - the same shape returned by scrapeer_get_flow. Use scrapeer_validate_flow to dry-run before writing.",
   );
 
 const patchOperationSchema = z
@@ -159,13 +159,13 @@ export const createFlowInput = z.object({
 export const updateFlowInput = z.object({
   flow: flowIdentifier,
   data: flowPayloadSchema.describe(
-    "The complete replacement flow. WARNING: this overwrites the entire flow definition — prefer scrapeer_patch_flow for incremental changes.",
+    "The complete replacement flow. WARNING: this overwrites the entire flow definition - prefer scrapeer_patch_flow for incremental changes.",
   ),
   baseProjectEventID: z
     .string()
     .optional()
     .describe(
-      "Version stamp from the last scrapeer_get_flow on this flow. Auto-populated by the MCP server when you've called scrapeer_get_flow earlier in the session — only set this manually if you need to override the cached value.",
+      "Version stamp from the last scrapeer_get_flow on this flow. Auto-populated by the MCP server when you've called scrapeer_get_flow earlier in the session - only set this manually if you need to override the cached value.",
     ),
 });
 
