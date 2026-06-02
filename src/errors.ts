@@ -56,6 +56,12 @@ export class GatewayError extends ScrapeerError {
   }
 }
 
+export class ValidationError extends ScrapeerError {
+  constructor(message?: string) {
+    super(message || "Request failed validation.", 400);
+  }
+}
+
 /**
  * 409 Conflict - the flow was modified between the caller's last
  * `get_flow` and this save/patch attempt. Carries the server's current
@@ -78,14 +84,16 @@ export class FlowConflictError extends ScrapeerError {
 
 /**
  * Parse the API error envelope from the response body.
- * Returns the error code if the body matches the envelope format, otherwise null.
  * Envelope format: {"error": {"code": "unauthorized", "message": "...", ...}}
  */
-function parseAPIErrorCode(body: string): string | null {
+function parseAPIError(body: string): { code: string; message?: string } | null {
   try {
     const parsed = JSON.parse(body);
     if (parsed?.error?.code && typeof parsed.error.code === "string") {
-      return parsed.error.code;
+      return {
+        code: parsed.error.code,
+        message: typeof parsed.error.message === "string" ? parsed.error.message : undefined,
+      };
     }
   } catch {
     // Not JSON - fall through to status-based classification
@@ -93,12 +101,42 @@ function parseAPIErrorCode(body: string): string | null {
   return null;
 }
 
+function parseValidationMessage(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body);
+
+    if (typeof parsed?.error === "string") {
+      if (typeof parsed.detail === "string" && parsed.detail.trim()) {
+        return `${parsed.error}: ${parsed.detail}`;
+      }
+      if (typeof parsed.description === "string" && parsed.description.trim()) {
+        return `${parsed.error}: ${parsed.description}`;
+      }
+      return parsed.error;
+    }
+
+    if (typeof parsed?.error?.message === "string") {
+      return parsed.error.message;
+    }
+
+    if (typeof parsed?.message === "string") {
+      return parsed.message;
+    }
+  } catch {
+    const trimmed = body.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
 export function classifyHttpError(status: number, body: string): ScrapeerError {
-  const apiCode = parseAPIErrorCode(body);
+  const apiError = parseAPIError(body);
 
   // Match on API error code when available (new envelope format)
-  if (apiCode) {
-    switch (apiCode) {
+  if (apiError) {
+    switch (apiError.code) {
       case "unauthorized":
         return new AuthenticationError();
       case "forbidden":
@@ -111,8 +149,13 @@ export function classifyHttpError(status: number, body: string): ScrapeerError {
         return new FlowNotFoundError();
       case "rate_limit_exceeded":
         return new RateLimitedError();
+      case "validation_error":
+      case "runnable_validation_failed":
+        return new ValidationError(apiError.message);
       case "capacity_unavailable":
-        return new GatewayError("Scrapeer cloud capacity is temporarily unavailable. Try again shortly.");
+        return new GatewayError(
+          "Scrapeer cloud capacity is temporarily unavailable. Try again shortly.",
+        );
       default:
         break;
     }
@@ -129,6 +172,9 @@ export function classifyHttpError(status: number, body: string): ScrapeerError {
         return new QuotaExceededError();
       }
       return new ForbiddenError();
+    case 400:
+    case 422:
+      return new ValidationError(parseValidationMessage(body) ?? undefined);
     case 404:
       return new FlowNotFoundError();
     case 409: {

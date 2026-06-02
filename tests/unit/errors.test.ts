@@ -7,6 +7,7 @@ import {
   RateLimitedError,
   QuotaExceededError,
   GatewayError,
+  ValidationError,
   classifyHttpError,
 } from "../../src/errors.js";
 
@@ -68,6 +69,18 @@ describe("classifyHttpError", () => {
     expect(err).toBeInstanceOf(RateLimitedError);
   });
 
+  it("maps 400 legacy validation body to ValidationError with detail", () => {
+    const err = classifyHttpError(
+      400,
+      JSON.stringify({
+        error: "flow failed structural validation",
+        detail: "edge references non-existent target node: ghost",
+      }),
+    );
+    expect(err).toBeInstanceOf(ValidationError);
+    expect(err.message).toContain("edge references non-existent target node");
+  });
+
   it("maps 5xx to GatewayError", () => {
     const err = classifyHttpError(502, "bad gateway");
     expect(err).toBeInstanceOf(GatewayError);
@@ -119,9 +132,16 @@ describe("classifyHttpError", () => {
       expect(err.message).toContain("capacity");
     });
 
-    it("falls back to status code for unknown API codes", () => {
+    it("maps validation_error code to ValidationError", () => {
       const body = JSON.stringify({ error: { code: "validation_error", message: "Bad input." } });
       const err = classifyHttpError(422, body);
+      expect(err).toBeInstanceOf(ValidationError);
+      expect(err.message).toBe("Bad input.");
+    });
+
+    it("falls back to status code for unknown API codes", () => {
+      const body = JSON.stringify({ error: { code: "unknown", message: "Bad input." } });
+      const err = classifyHttpError(500, body);
       expect(err).toBeInstanceOf(GatewayError);
     });
   });
