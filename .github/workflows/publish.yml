@@ -1,35 +1,92 @@
-name: Publish to npm
+name: Publish MCP Server
 
 on:
+  push:
+    tags:
+      - "v*.*.*"
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   publish:
+    name: Publish npm package and MCP Registry metadata
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11.3.0
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22"
           cache: pnpm
-          registry-url: https://registry.npmjs.org
+          registry-url: "https://registry.npmjs.org"
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - run: pnpm run build
+      - name: Verify release metadata
+        run: pnpm run verify:release
 
-      - run: pnpm test
+      - name: Verify tag matches package version
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).version')"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION" >&2
+            exit 1
+          fi
 
-      - run: pnpm publish --access public --no-git-checks
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Check whether npm version already exists
+        id: npm_check
+        run: |
+          PACKAGE_NAME="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).name')"
+          VERSION="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).version')"
+          if pnpm view "${PACKAGE_NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "${PACKAGE_NAME}@${VERSION} already exists on npm; skipping npm publish."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish npm package
+        if: steps.npm_check.outputs.published != 'true'
+        run: pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install mcp-publisher
+        run: |
+          set -euo pipefail
+          OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_${OS}_${ARCH}.tar.gz" \
+            | tar xz mcp-publisher
+          chmod +x mcp-publisher
+
+      - name: Validate MCP Registry metadata
+        run: ./mcp-publisher validate
+
+      - name: Log in to MCP Registry
+        run: ./mcp-publisher login dns --domain scrapeer.com --private-key "$MCP_REGISTRY_PRIVATE_KEY"
+        env:
+          MCP_REGISTRY_PRIVATE_KEY: ${{ secrets.MCP_REGISTRY_PRIVATE_KEY }}
+
+      - name: Publish MCP Registry metadata
+        run: ./mcp-publisher publish

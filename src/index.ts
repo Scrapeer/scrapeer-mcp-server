@@ -67,6 +67,8 @@ for (const def of toolDefinitions) {
 }
 
 const transport = new StdioServerTransport();
+await server.connect(transport);
+
 process.stdin.resume();
 // Keep the stdio server alive until the MCP client terminates the process.
 const keepAlive = setInterval(() => undefined, 1_000_000_000);
@@ -76,5 +78,3 @@ const shutdown = () => {
 };
 process.once("SIGINT", shutdown);
 process.once("SIGTERM", shutdown);
-
-await server.connect(transport);

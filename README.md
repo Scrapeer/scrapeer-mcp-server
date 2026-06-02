@@ -162,34 +162,3 @@ pnpm run build
 ```
 
 Tests use [msw](https://mswjs.io/) to mock the Scrapeer API. No real credentials are needed.
-
-## Publishing
-
-Registry name: `com.scrapeer/mcp-server`
-
-Before publishing, keep these versions in sync:
-
-- `package.json` -> `version`
-- `server.json` -> top-level `version`
-- `server.json` -> `packages[0].version`
-- `src/index.ts` -> `McpServer({ version })`
-
-Release checklist:
-
-```bash
-pnpm install
-pnpm audit
-pnpm test
-pnpm run build
-pnpm pack --dry-run
-pnpm publish --access public
-```
-
-After the npm package exists, publish the metadata to the official MCP Registry:
-
-```bash
-mcp-publisher login dns --domain scrapeer.com --private-key "$MCP_REGISTRY_PRIVATE_KEY"
-mcp-publisher publish
-```
-
-The npm package must include `mcpName: "com.scrapeer/mcp-server"` in `package.json`; the value must match `server.json`.

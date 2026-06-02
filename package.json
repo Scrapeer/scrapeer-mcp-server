@@ -18,6 +18,7 @@
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:release": "node scripts/verify-release-metadata.mjs",
     "prepublishOnly": "pnpm run build"
   },
   "repository": {
