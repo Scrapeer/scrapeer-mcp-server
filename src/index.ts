@@ -7,7 +7,7 @@ import { toolDefinitions } from "./tools/definitions.js";
 import { createHandlers } from "./tools/handlers.js";
 
 const API_KEY = process.env.SCRAPEER_API_KEY;
-const BASE_URL = "https://auth.scrapeer.com";
+const BASE_URL = process.env.SCRAPEER_BASE_URL || "https://auth.scrapeer.com";
 
 if (!API_KEY) {
   process.stderr.write(
